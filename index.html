@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TasKing</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="style.css">
+    <script defer src="index.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <ul class="menu">
+                <li class="addTask" title="Add a task">
+                    <span class="material-symbols-outlined">add</span>
+                    <span class="label">add task</span>
+                </li>
+                <!-- <li class="addProject" title="Add a task category">
+                    <span class="material-symbols-outlined">category</span>
+                    <span class="label">add category</span>
+                </li> -->
+                <!-- <li class="something">
+                    <span class="material-symbols-outlined"></span>
+                    <span class="label">something</span>
+                </li> -->
+            </ul>
+        </div>
+        <div class="body">
+            <div class="searches">
+                <span class="material-symbols-outlined">move_to_inbox</span>
+                <span class="inbox">Inbox</span>
+                <!-- canned searches - quick access -->
+                <ul class="searches">
+                    <li class="all">
+                        <span class="material-symbols-outlined">language</span>
+                        <span class="label">All</span>
+                    <!-- + event -->
+                </li>
+                
+                    <li class="today">
+                            <span class="material-symbols-outlined">today</span>
+                            <span class="label">Today</span>
+                        <!-- + event -->
+                    </li>
+                    <li class="tomorrow">
+                            <span class="material-symbols-outlined">event</span>
+                            <span class="label">Tomorrow</span>
+                    </li>
+                    <li class="this_week">
+                            <span class="material-symbols-outlined">view_week</span>
+                            <span class="label">This week</span>
+                    </li>
+                </ul>
+
+                <!-- categories -->
+                <span class="material-symbols-outlined">category</span>
+                <span class="inbox">Categories</span>
+
+                <!-- add a new project category  -->
+                <!-- <div class="addProject" title="Add a task category">
+                    <span class="material-symbols-outlined">add</span>
+                    <span class="label">add new category</span>
+                </div> -->
+                <ul class="projects">
+                    <li>
+                        <span class="material-symbols-outlined">family_restroom</span>
+                        <span class="label">Family</span>
+                    </li>
+                    <!-- <li> family_restroom
+                        <span class="material-symbols-outlined">work_history</span>
+                        <span class="label">Work</span>
+
+                    </li>
+                    <li>
+                        <span class="material-symbols-outlined">health_metrics</span>
+                        <span class="label">Health</span>
+
+                    </li> -->
+                </ul>
+            </div>
+
+            <!-- details work area -->
+            <div class="detail">
+                <div class="task_list viz">
+                    <div class="project">
+                        <span class="material-symbols-outlined"></span>
+                        <span class="label"></span>
+                    </div>
+                    <ul class="task_list">
+                        <li class="task">
+                            <!-- description, due date, priority -->
+                            <span class="material-symbols-outlined priority">priority</span>
+                            <span class="material-symbols-outlined project">project</span>
+                             <span class="date_due"></span>
+                             <span class="description" placeholder="task description"></span>
+
+                        </li>
+                    </ul>
+
+                </div>
+
+
+                <div class="task_detail viz" data-id="">
+                    <div class="id xviz">
+                        <!-- <span class="material-symbols-outlined">flowsheet</span> -->
+                        <input class="id" placeholder="task id">
+                    </div>
+
+                    <div class="description">
+                        <span class="material-symbols-outlined">flowsheet</span>
+                        <input class="description" placeholder="task description">
+                    </div>
+                    <div class="note" contenteditable="true">
+                        <div class="head">
+                            <span class="material-symbols-outlined">edit_note</span>
+                            <input class="note" placeholder="note">
+                        </div>
+                        <div class="content" contenteditable="true"></div>
+                    </div>
+                    <div class="priority">
+                        <div class="head">
+                            <span class="material-symbols-outlined">priority</span>
+                            <!-- <span class="label">priority</span> -->
+                            <select class="priority">
+                                <option value="-" selected>-</option>
+                                <option value="low">low</option>
+                                <option value="moderate">moderate</option>
+                                <option value="elevated">elevated</option>
+                                <option value="urgent">urgent</option>
+                            </select>
+                        </div>
+                        <!-- <div class="content">                        </div> -->
+                    </div>
+                    <div class="project">
+                        <div class="head">
+                            <span class="material-symbols-outlined">category</span>
+                            <!-- <span class="label">category</span> -->
+                            <select class='project'>
+                                <option value=""></option>
+                            </select>
+                        </div>
+                        <!-- <div class="content" >                        </div> -->
+                    </div>
+                    <div class="date_create">
+                        <!-- time elapsed -->
+                    </div>
+                    <div class="date_due">
+                        <div class="head">
+                            <span class="material-symbols-outlined">pending_actions</span>
+                            <span class="label">Due on</span>
+                            <input type="date" class="date_due xviz">
+                        </div>
+
+                    </div>
+                    <div class="date_done">
+                        <div class="head">
+                            <span class="material-symbols-outlined">done</span>
+                            <span class="label">check</span>
+                            <input type="date" class="date_done xviz">
+                        </div>
+                    </div>
+                    <div class="checklist">
+                        <div class="head">
+                            <span class="material-symbols-outlined">checklist</span>
+                            <span class="label">checklist</span>
+                            <span class="material-symbols-outlined checklist_add">assignment_add</span>
+                        </div>
+                        <div class="content">
+                            <ul class="checklist">
+                                <li class="checklist" data-id="-1">
+                                    <span class="material-symbols-outlined done" title="mark item as complete (toggle)">check_box_outline_blank</span>
+                                    <input class="subtask" placeholder="checklist item">
+                                    <!-- <span class="label" contenteditable="true"></span> -->
+                                    <span class="material-symbols-outlined del" >delete</span>
+                                </li>
+                            </ul>
+                        </div>
+
+
+
+
+                    </div>
+                    
+                </div>
+
+
+            </div>
+        </div>
+        <div class="footer">
+
+        </div>
+    </div>
+
+    
+</body>
+</html>
