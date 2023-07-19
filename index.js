@@ -1,9 +1,6 @@
 
 
-// let checklist_ul
-// let checklist_li_clone
-// let checklist_li_add
-// let currect_task = {}
+
 
 const day_msecs = 24 * 3600000
 
@@ -13,14 +10,14 @@ let tomorrow = today + day_msecs
 let thisweek = today + 7 * day_msecs
 
 let priorities = {
-    '-': 0,
+    'none': 0,
     'low': 1,
     'moderate': 2,
     'elevated': 3,
     'urgent' :4
 }
 
-let projects = ['-','home','family','work','health','growth','leisure']
+let projects = ['_','home','family','work','health','growth','leisure']
 let _projects = {
     _: { icon: '', text: 'unassigned' },
     home: { icon: 'apartment', text: 'unassigned' },
@@ -239,6 +236,8 @@ class taskInterface {
         this.nodes.task_list = selector('ul.task_list')
         this.nodes.task_list_task_clone = this.nodes.task_list.querySelector('li.task')
         this.nodes.task_list.removeChild(this.nodes.task_list_task_clone)
+        this.nodes.task_list_seperator_clone = this.nodes.task_list.querySelector('li.seperator')
+        this.nodes.task_list.removeChild(this.nodes.task_list_seperator_clone)
 
         this.nodes.id = selector('input.id')
         this.nodes.description = selector('input.description')
@@ -299,41 +298,38 @@ class taskInterface {
             this.nodes.projects_grp.appendChild(clone)
         })
 
-        // this.nodes.projects_add = selector('div.addProject')
-        // this.nodes.projects_add.addEventListener('click', (evt) => {
-        //     res = prompt('')
-        // })
+        // search nodes
+        this.nodes.search_all = selector('div.searches .all')
+        this.nodes.search_all.addEventListener('click', (evt) => list_all(evt))
 
-        //this.nodes.assign = selector('.assign')
+        this.nodes.search_overdue = selector('div.searches .overdue')
+        this.nodes.search_overdue.addEventListener('click', (evt) => list_overdue(evt))
 
-        /*
-            nodes.description    onchange this.values.description = evt.target.value -- description, note, date_create
-            nodes.note           onchange this.values.note = evt.target.value
-            nodes.project        onchange --> this.values.project = this.nodes.project.value
-            nodes.priority       onchange --> this.values.priority = priorities[this.nodes.priority.value]
-            nodes.date_due       onchange --> this.values.date_due = this.nodes.date_due.valueAsNumber
-            nodes.date_done      onchange --> { 
-                this.values.date_done = this.nodes.date_done.valueAsNumber
-                nodes.date_done_label.classlist.replace('viz', 'xviz')        
-            }
+        this.nodes.search_today = selector('div.searches .today')
+        this.nodes.search_today.addEventListener('click', (evt) => list_today(evt))
 
-            nodes.date_done_label    onclick  --> this.values.date_done = Date.now() 
-            nodes.date_done_label    ondblclick  --> {
-                nodes.date_done_label.classList.replace('viz', 'xviz')        
-                this.nodes.date_done.classList.replace('xviz','viz')
-            }                
+        this.nodes.search_tomorrow = selector('div.searches .tomorrow')
+        this.nodes.search_tomorrow.addEventListener('click', (evt) => list_tomorrow(evt))
 
-        nodes.checklist_add  onclick --> {
-            checklist_ul.appendChild(checklist_li_clone.cloneNode(true)   
-        }
-        
-        
-        
-        
-        
-        
-        */
+        this.nodes.search_thisweek = selector('div.searches .thisweek')
+        this.nodes.search_thisweek.addEventListener('click', (evt) => list_thisweek(evt))
+
+        this.nodes.search_future = selector('div.searches .future')
+        this.nodes.search_future.addEventListener('click', (evt) => list_future(evt))
+
+
+
     }
+    // list_all = (evt) => this.tasklist_all()
+    // }
+    // list_overdue = (evt) => {
+
+    // }
+    // list_today = (evt) => {}
+    // list_tomorrow = (evt) => {}
+    // list_thisweek = (evt) => {}
+    // list_future = (evt) => {}
+
     date_due = (evt) => {
         if (this.nodes.date_due.classList[1] == 'xviz') {
             this.nodes.date_due.classList.replace('xviz', 'viz')
@@ -381,13 +377,13 @@ class taskInterface {
         let parent = evt.target.parentNode
         let li_id = parent.getAttribute('data-id')
         let _ = this.values.checklist.find(item => item.id === li_id)
-        _.subtask = evt.target.value
+        _.subtask = evt.target.value;
     }
 
     set_fields(task) {
         let _task =task._dump()
         let _keys = keys(_task)
-        this.values = {}
+        // this.values = {}
         this.nodes.checklist.querySelectorAll('li').forEach(_li => this.nodes.checklist.removeChild(_li))
         _keys.forEach(_k => {
             if (_task[_k] instanceof Array) {
@@ -468,51 +464,75 @@ class taskInterface {
         // this.nodes.task_list.appendChild(clone)
         return clone
     }
-    tasklist_all(list) { // default dump all and list <-- sort and group !!!!
-        list._dump().forEach(item => {
-            // let clone = this.nodes.task_list_task_clone.cloneNode(true)
-            // clone.setAttribute('data-id', item.id)
-            // let priority = '-'
-            // let project = '-'
 
-            // switch (item.priority) {
-            //     case 'urgent':
-            //     case 'elevated':
-            //         priority = 'priority_high';
-            //         break;
-            //     case 'moderate':
-            //         priority = 'priority'
-            //         break;
-            //     default:
-            //         priority = 'low_priority'
-            // }
+    // item: json task 
+    tasklist_task = (item, pri, proj) => {
+        let clone = this.nodes.task_list_task_clone.cloneNode(true)
+        clone.setAttribute('data-id', item.id)
+        let priority = '-'
+        let project = '-'
+        if (pri) {
+            switch (item.priority) {
+                case 'urgent':
+                case 'elevated':
+                    priority = 'priority_high';
+                    break;
+                case 'moderate':
+                    priority = 'priority'
+                    break;
+                default:
+                    priority = 'low_priority'
+            }
+            clone.querySelector('span.priority').textContent = priority  
+        } else {
+            clone.removeChild(clone.querySelector('span.priority'))
+        }
+        if (proj) {
+            switch (item.project) {
+                case '_':
+                    project = '';
+                    break;
+                case 'home':
+                    project = 'home';
+                    break;
+                case 'work':
+                    project = 'apartment'
+                    break;
+                case 'health':
+                    project = 'ecg'
+                    break;
+                case 'growth':
+                    project = 'school'
+                    break;
+                case 'family':
+                    project = 'family_restroom'
+                    break;
+                case 'leisure':
+                    project = 'hiking';
+                    break;
+                default:
+                    project = ''
+            }
+	        clone.querySelector('span.project').textContent = project  
+        } else {
+            clone.removeChild(clone.querySelector('span.project'))
+        }
 
-            // switch (item.project) {
-            //     case 'home':
-            //         project = 'home';
-            //         break;
-            //     case 'work':
-            //         project = 'apartment'
-            //         break;
-            //     case 'health':
-            //         project = 'ecg'
-            //         break;
-            //     case 'growth':
-            //         project = 'school'
-            //         break;
-            //     case 'family':
-            //         project = 'family_restroom'
-            //         break;
-            //     case 'leisure':
-            //         project = 'hiking';
-            //         break;
-            //     default:
-            //         project = ''
-            // }
-            // clone.querySelector('span.priority').textContent = priority  
-            // clone.querySelector('span.project').textContent = project
-            // clone.querySelector('span.date_due').textContent = new Date(item.date_due).toLocaleDateString()
-            // clone.querySelector('span.description').textContent = item.description 
+
+        // clone.querySelector('span.project').textContent = project
+        clone.querySelector('span.date_due').textContent = new Date(item.date_due).toLocaleDateString()
+        clone.querySelector('span.description').textContent = item.description 
+        
+        return clone
+    }
+
+    clear_tasklist () {
+        this.nodes.task_list.querySelectorAll('li').forEach(li => this.nodes.task_list.removeChild(li))
+    }
+    tasklist_all(list) { // default dump all and list list <-- sort and group !!!!
+        this.clear_tasklist()
+        let _list = list._dump()
+        _list.forEach(item => {
             let clone = this.tasklist_item(item)
             this.nodes.task_list.appendChild(clone)
         })
@@ -531,27 +551,101 @@ function page_config() {
 
     lorem = "Lorem ipsum dolor sit amet consectetur adipisicing elit. Distinctio quidem, corrupti placeat dolor obcaecati quasi laudantium saepe sit, quos perferendis est similique necessitatibus numquam quisquam autem mollitia reiciendis! Rem, illum! Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel quibusdam, consequatur animi minus eius debitis obcaecati earum sapiente impedit, magnam labore molestias tempore non? Culpa voluptatibus voluptas provident adipisci nulla. Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam, minus harum molestiae velit sapiente odit consequuntur odio dolorum? Inventore consectetur accusamus error eveniet fugiat cupiditate, repudiandae culpa maxime pariatur aperiam."
     tasklist = new Tasks()
-    for (n = 0; n< 12; n++) {
+    for (n = 0; n < 36; n++) {
         _t = new Task(n + ' auto gen new task')
         _t._note(`${n} ${lorem.substring(parseInt(n * Math.random() * 15), 14)}`)
-        _t._date_due(Date.now() + ((Math.random() * 24) * day_msecs - (12 * day_msecs)))
+        _t._date_due(parseInt(Date.now() + ((Math.random() * 24) * day_msecs - (12 * day_msecs))))
         _t._priority( keys(priorities)[parseInt(Math.random() * 4)])
         _t._project( projects[parseInt(Math.random() * projects.length)])
+        M = parseInt(Math.random() * 5)
+        for (m = 0; m < M; m++) {
+            _t.checklist.push({ id: uuid(), status: false, subtask: lorem.substring(parseInt(m * Math.random() * 15), 14)})
+        }
         tasklist._add(_t)
     }
 
 
+// sorts
+by_priority = (a, b) => priorities[a.priority] < priorities[b.priority] // highest first (descending) if ascending [].reverse()
+by_project = (a, b) => a.project < b.project
+by_date = (a, b) => a.date_due < b.date_due
 
+group_then_sort_each = (list, projects, sort_by) => {
+    groups_sorted = {}
+    projects.forEach(prj => {
+        groups_sorted[prj] = list.filter(tsk => tsk.project == prj).sort(sort_by)
+    })
+  return groups_sorted
+}
+
+checksum = (tasks_by) => {
+    let tot = 0
+    tasks_by_res = keys(tasks_by).reduce(( tot, f)=>tot += tasks_by[f].length, tot)
+    return tasks_by_res
+}
 
 let itask = new taskInterface()
 // itask.set_fields(tasklist._tasklist[3])
 
 itask.tasklist_all(tasklist)
 
+_tasks = tasklist._dump()
+
+tasks_by_timeframe = {
+  	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
+    today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
+    tomorrow: _tasks.filter(_t =>  _t.date_due > today && _t.date_due < tomorrow ),
+    restofweek: _tasks.filter(_t =>  _t.date_due > tomorrow && _t.date_due < thisweek ),
+  	future:  _tasks.filter(_t =>  _t.date_due > thisweek )
+}
+tasks_by_timeframe_count = checksum(tasks_by_timeframe)
+console.log(['tasks_by_timeframe_count',tasks_by_timeframe_count ])
+
+tasks_by_group = {
+    unassigned: _tasks.filter(_t => _t.project == '_' ),
+    home: _tasks.filter(_t => _t.project == 'home' ),
+    work: _tasks.filter(_t => _t.project == 'work' ),
+    family: _tasks.filter(_t => _t.project == 'family' ),
+    health: _tasks.filter(_t => _t.project == 'health' ),
+    growth: _tasks.filter(_t => _t.project == 'growth' ),
+    leisure: _tasks.filter(_t => _t.project == 'leisure' ),
+
+}
+tasks_by_group_count = checksum(tasks_by_group)
+console.log(['tasks_by_group_count', tasks_by_group_count])
+
+tasks_by_priority = {
+    urgent: _tasks.filter(_t => _t.priority == 'urgent' ),
+    elevated: _tasks.filter(_t => _t.priority == 'elevated' ),
+    moderate: _tasks.filter(_t => _t.priority == 'moderate' ),
+    low: _tasks.filter(_t => _t.priority == 'low' ),
+    none: _tasks.filter(_t => _t.priority == 'none' ),
+    
+}
+tasks_by_priority_count = checksum(tasks_by_priority)
+console.log(['tasks_by_priority_count', tasks_by_priority_count])
+
+tomorrow_grps_srtd_pri = group_then_sort_each(tasks_by_timeframe.tomorrow, projects, by_priority)
+all_priority_srt_grp = group_then_sort_each(_tasks, keys(priorities), by_project)
+
+itask.clear_tasklist()
+keys(tomorrow_grps_srtd_pri).forEach(grp => {
+  if (tomorrow_grps_srtd_pri[grp].length) {
+    clone = itask.nodes.task_list_seperator_clone.cloneNode(true)
+    clone.querySelector('span.seperator').textContent = _projects[grp].icon
+    clone.querySelector('span.label').textContent = grp
+    itask.nodes.task_list.appendChild(clone)
+        tomorrow_grps_srtd_pri[grp].forEach(task => {
+                item = itask.tasklist_task(task, true, false)
+                itask.nodes.task_list.appendChild(item)
+              })        
+  }
+})
+
 /*
 
 _tasks = tasklist._dump()
-tasks_for = {
+tasks_by_timeframe = {
   	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
     today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
     tomorrow: _tasks.filter(_t =>  _t.date_due > today && _t.date_due > tomorrow ),
@@ -562,7 +656,69 @@ tasks_for = {
 
 by_priority = (a, b) => priorities[a.priority] > priorities[b.priority]
 
-tasks_for.overdue.sort((a,b) => )
+group_sort = (list, group_by, sort_by) => {
+	groups_sorted = {}
+    group_by.forEach(grp => {
+    groups_sorted[grp] = []
+    groups_sorted[grp].push(list.filter(tsk => tsk.project == grp).sort(sort_by))
+  })
+  return groups_sorted
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // tasklisting
+        // this.nodes.task_list
+        
+        // this.nodes.projects_add = selector('div.addProject')
+        // this.nodes.projects_add.addEventListener('click', (evt) => {
+        //     res = prompt('')
+        // })
+
+        //this.nodes.assign = selector('.assign')
+
+        /*
+            nodes.description    onchange this.values.description = evt.target.value -- description, note, date_create
+            nodes.note           onchange this.values.note = evt.target.value
+            nodes.project        onchange --> this.values.project = this.nodes.project.value
+            nodes.priority       onchange --> this.values.priority = priorities[this.nodes.priority.value]
+            nodes.date_due       onchange --> this.values.date_due = this.nodes.date_due.valueAsNumber
+            nodes.date_done      onchange --> { 
+                this.values.date_done = this.nodes.date_done.valueAsNumber
+                nodes.date_done_label.classlist.replace('viz', 'xviz')        
+            }
+
+            nodes.date_done_label    onclick  --> this.values.date_done = Date.now() 
+            nodes.date_done_label    ondblclick  --> {
+                nodes.date_done_label.classList.replace('viz', 'xviz')        
+                this.nodes.date_done.classList.replace('xviz','viz')
+            }                
+
+        nodes.checklist_add  onclick --> {
+            checklist_ul.appendChild(checklist_li_clone.cloneNode(true)   
+        }
+        
+        
+        
+        
+        
+
+tasks_by_timeframe.overdue.sort(by_priority )
 
 // display tasks
 itask._
