@@ -9,24 +9,31 @@ let yesterday = today - day_msecs
 let tomorrow = today + day_msecs
 let thisweek = today + 7 * day_msecs
 
+// priorities = {
+//     'none': 0,
+//     'low': 1,
+//     'moderate': 2,
+//     'elevated': 3,
+//     'urgent' :4
+// }
+
 let priorities = {
-    'none': 0,
-    'low': 1,
-    'moderate': 2,
-    'elevated': 3,
-    'urgent' :4
+    urgent: { icon: 'priority_high', text: 'urgent' },
+    high: { icon: 'priority_high', text: 'high' },
+    medium: { icon: 'priority', text: 'medium' },
+    low: { icon: 'low_priority', text: 'low' },
+    none: { icon: 'low_priority', text: 'none' },
 }
 
-let projects = ['_','home','family','work','health','growth','leisure']
-let _projects = {
-    _: { icon: '', text: 'unassigned' },
-    home: { icon: 'apartment', text: 'unassigned' },
-    family: { icon: 'family_restroom', text: 'unassigned' },
-    work: { icon: 'work_history', text: 'unassigned' },
-    health: { icon: 'health_metrics', text: 'unassigned' },
-    growth: { icon: 'school', text: 'unassigned' },
-    leisure: { icon: 'hiking', text: 'unassigned' },
-    
+// let projects = ['unassigned','home','family','work','health','growth','leisure']
+let projects = {
+    unassigned: { icon: 'warning' },
+    home: { icon: 'home' },
+    family: { icon: 'family_restroom' },
+    work: { icon: 'apartment' },
+    health: { icon: 'health_metrics' },
+    growth: { icon: 'school' },
+    leisure: { icon: 'hiking' }, 
 }
 
 
@@ -41,6 +48,23 @@ uuid = () => {
 selector = (classes) => document.querySelector(classes) 
 textContent = (elem, val) => elem.textContent = val
 
+// sorts
+sort_priority = (a, b) => priorities[a.priority] < priorities[b.priority] // highest first (descending) if ascending [].reverse()
+sort_project = (a, b) => a.project < b.project
+sort_date = (a, b) => a.date_due < b.date_due
+
+
+// groupings
+by_overdue = (_t) => _t.date_due < yesterday
+by_today = (_t) =>  _t.date_due > yesterday &&  _t.date_due < today
+by_tomorrow = (_t) =>  _t.date_due > today && _t.date_due < tomorrow 
+by_thisweek = (_t) =>  _t.date_due > today && _t.date_due < thisweek 
+by_future = (_t) =>  _t.date_due > thisweek
+//
+by_priority = (_t) => _t.priority === _priority
+by_project = (_t) => _t.project === _project
+by_all = (_t) => _t
+
 
 local_storage = () => {
     _storage = {}
@@ -54,8 +78,8 @@ local_storage = () => {
 /* local_storage usage  
     (emulates browser localStorage on Node)
     localStorage = local_storage()
-    localStorage.setItem('tasklist', jstr(tasklist))
-    _ret = jpar(localStorage.getItem('tasklist'))
+    localStorage.setItem('tasks', jstr(tasks))
+    _ret = jpar(localStorage.getItem('tasks'))
 */
 
 // class
@@ -111,64 +135,28 @@ class Task  {
     t1._note('1st commentary')
     t1._date_due(t1._date_create() + 7 * 24*3600000)
     t1._project('work')
-    _t1 = t1._dump()
-    _t1s = jstr(_t1)
-
-    t11 = new Task('2nd task', _t1.date_create)
-    t11._date_create() == t1._date_create() 
-
-
-    t2 = new Task('2nd task')
-    t2._date_create() == t1._date_create() 
-    t2._note('2nd commentary')
-    t2c._date_due(Date.now() + 7 * 24*3600000)
-    t2._project('home')
-    t2._priority(3)
-
-
-    _t1 = t1._dump()
-    delete _t1.id
-    delete _t1.description
-    delete _t1.date_create
-    _t1.project = 'event'
-    _t1.priority = 5
-    _t1.note = 'a note tate'
-    _t1.checklist = ['1st subtask','2nd subtask', '3rd']
-    _t1
-
-    t3 = new Task('3rd task')
-    t3._set(_t1)
-    _t3 = t3._dump()
-
-
+    _json = t1._dump()
 */
 
 class Tasks  {
     constructor() {
-        this._tasklist = []
-        this._projects = ['home','health','work','event','meeting' ]
+        this._list = []
     }
-    _add = (todo) => this._tasklist.push(todo) // create
+    _add = (todo) => this._list.push(todo) // create
     _get = (id) => {  // read
-       let idx = this._tasklist.findIndex(_t => _t.id === id)
-       return this._tasklist[idx]
+       let idx = this._list.findIndex(_t => _t.id === id)
+       return this._list[idx]
     }
     _upd = (todo) => { // update
-         let idx = this._tasklist.findIndex(_t => _t.id === todo._id)
-         this._tasklist[idx] = todo
+         let idx = this._list.findIndex(_t => _t.id === todo._id)
+         this._list[idx] = todo
     }
-    _del = (id) => this._tasklist.splice(this._tasklist.find(_t => _t.id === id), 1) // delete
+    // _del = (id) => this._list.splice(this._list.find(_t => _t.id === id), 1) // delete
+    _del = (idx) => this._list.splice(idx, 1) // delete
 
-    // project categories identifiers crud
-    _add_project = (project) => this._projects.push(project)
-    _get_projects = () => this._projects.map(t => t ) 
-    _upd_project = (project, upd) => this._projects[this._projects.findIndex(_p => _p === project)] = upd 
-    _del_project = (project) => this._projects.splice(_projects.findIndex(_p => _p === project), 1) // delete
-
-    // projects
-    _dump = () => this._tasklist.map(task => task._dump())
-    _filter = (field, val) => this._tasklist.filter(t => t[field] === val) 
-    _sort = (field, dir) => { return (dir == 'asc' || dir == 'a' || dir == 'A' ? this._tasklist.sort((a, b) => a[field] - b[field]) : this._tasklist.sort((a, b) => b[field] - a[field]))}
+    _dump = () => this._list.map(task => task._dump())
+    _filter = (field, val) => this._list.filter(t => t[field] === val) 
+    _sort = (field, dir) => { return (dir == 'asc' || dir == 'a' || dir == 'A' ? this._list.sort((a, b) => a[field] - b[field]) : this._list.sort((a, b) => b[field] - a[field]))}
     _import = (tasks) => {
         tasks.forEach(t => {
             let task = new Task(_t.description, _t.date_create)
@@ -177,56 +165,23 @@ class Tasks  {
         })
 
     }
-    // _save_store = (store) => this._tasklist.forEach(task => store.setItem(task.id, jstr(task._dump())))
-    // _read_store = (store) => jpar(store.getItem('_tasklist'))
-
+    // _save_store = (store) => this._list.forEach(task => store.setItem(task.id, jstr(task._dump())))
+    // _read_store = (store) => jpar(store.getItem('_list'))
 }
 
-/* build tasklist and add tasks
-    tasklist = new Tasks()
-    tasklist._add(t1)
-    tasklist._add(t2)
-    tasklist._add(t3)
-    tasklist._dump()
+/* build tasks and add tasks
+    tasks = new Tasks()
+    tasks._add(t1)
+    _json = tasks._dump()
 
-    tasklist._get_projects()
-    tasklist._add_project('kids')
-    tasklist._upd_project('kids', 'Andy')
-
-    // dump the first tasklist and recreate from dump to
-    // simulate save to storage and then rehydration from storage
-
-    // dump and parse first tasklist
-    _ = jstr(tasklist._dump())
-    _tasks = jpar(_)
-
-    // create a new 2nd tasklist and dupe /rehydrate the first into the second
-    tasks2 = new Tasks()
-
-    // repopulate 2nd tasklist
-    _tasks.forEach(_t => {
-        task = new Task(_t.description, _t.date_create)
-        task._set(_t)
-        tasks2._add(task)
-    })
-
-    // non exhaustive (but critical) checks on equality
-    _t21 = tasks2._get(_tasks[1].id)
-    _t21.date_create == _tasks[1].date_create
-
-    _t20 = tasks2._get(_tasks[0].id)
-    _t20.date_create == _tasks[0].date_create
-
-    _t22 = tasks2._get(_tasks[2].id)
-    _t22.date_create == _tasks[2].date_create
 
 */
 
 
-
 class taskInterface {
     constructor() {
-        this.projects = projects // ['home','family','work','leisure','health','growth']
+        this.projects = projects
+        this._blank = { }
         this.nodes = { }
         this.values = { }
 
@@ -235,7 +190,9 @@ class taskInterface {
 
         this.nodes.task_list = selector('ul.task_list')
         this.nodes.task_list_task_clone = this.nodes.task_list.querySelector('li.task')
+        
         this.nodes.task_list.removeChild(this.nodes.task_list_task_clone)
+
         this.nodes.task_list_seperator_clone = this.nodes.task_list.querySelector('li.seperator')
         this.nodes.task_list.removeChild(this.nodes.task_list_seperator_clone)
 
@@ -247,7 +204,7 @@ class taskInterface {
         this.nodes.project_option = this.nodes.project.querySelector('option')
         this.nodes.project.removeChild(this.nodes.project_option)
         // set the list of project options
-        this.projects.forEach(opt => {
+        keys(this.projects).forEach(opt => {
             let opt_node = this.nodes.project_option.cloneNode(true)
             opt_node.value = opt
             opt_node.textContent = opt
@@ -269,66 +226,114 @@ class taskInterface {
         this.nodes.date_done = selector('input.date_done')
         this.nodes.date_done.addEventListener('change', evt => this.date_done_change(evt))
         
-
-        this.nodes.checklist = selector('ul.checklist')
-        
+        this.nodes.checklist = selector('ul.checklist')        
         this.nodes.checklist_li_clone = selector('li.checklist').cloneNode(true)
 
         this.nodes.checklist.removeChild(selector('li.checklist'))
         this.nodes.checklist_add = selector('.checklist_add')
-        this.nodes.checklist_add.addEventListener('click', (evt) => {
-            let clone = this.nodes.checklist_li_clone.cloneNode(true)
-            let id = uuid()
-            this.values.checklist.push({ id: id, status: false, subtask: '' })
-            clone.setAttribute('data-id', id)
-            clone.querySelector('input.subtask').addEventListener('change', evt => this.checklist_li_change(evt))
-            clone.querySelector('span.done').addEventListener('click', evt => this.checklist_li_done(evt))
-            clone.querySelector('span.del').addEventListener('click', evt => this.checklist_li_del(evt))
-            this.nodes.checklist.appendChild(clone)  
-        })
+        this.nodes.checklist_add.addEventListener('click', evt => this.checklist_add_item(evt))
         
         // project group sidebar
         this.nodes.projects_grp = selector('ul.projects')
         this.nodes.projects_grp_li_clone = this.nodes.projects_grp.querySelector('li')
         this.nodes.projects_grp.removeChild(this.nodes.projects_grp_li_clone)
-        keys(_projects).forEach(prj => {
+        keys(projects).forEach(prj => {
             let clone = this.nodes.projects_grp_li_clone.cloneNode(true)
-            clone.querySelector('span.material-symbols-outlined').textContent = prj == '_' ? 'warning' :  _projects[prj].icon
-            clone.querySelector('span.label').textContent = prj == '_' ? 'unassigned' : prj // _projects[prj].text
+            clone.querySelector('span.material-symbols-outlined').textContent = prj == '_' ? 'warning' :  projects[prj].icon
+            clone.querySelector('span.label').textContent = prj == '_' ? 'unassigned' : prj // projects[prj].text
+            let _filter
+            switch (prj) {
+                case 'unassigned': _filter = (_t) => _t.project == 'unassigned'; break;
+                case 'home': _filter = (_t) => _t.project == 'home'; break;
+                case 'work': _filter = (_t) => _t.project == 'work'; break;
+                case 'family': _filter = (_t) => _t.project == 'family'; break;
+                case 'health': _filter = (_t) => _t.project == 'health'; break;
+                case 'growth': _filter = (_t) => _t.project == 'growth'; break;
+                case 'leisure': _filter = (_t) => _t.project == 'leisure'; break;
+            }
+            clone.addEventListener('click', (evt) => this.list(_filter, projects[prj].icon, prj, true, false))
             this.nodes.projects_grp.appendChild(clone)
         })
 
         // search nodes
         this.nodes.search_all = selector('div.searches .all')
-        this.nodes.search_all.addEventListener('click', (evt) => list_all(evt))
+        this.nodes.search_all.addEventListener('click', (evt) => this.list(by_all, priorities, 'By Priority', true, true))
 
         this.nodes.search_overdue = selector('div.searches .overdue')
-        this.nodes.search_overdue.addEventListener('click', (evt) => list_overdue(evt))
+        this.nodes.search_overdue.addEventListener('click', (evt) => this.list(by_overdue, 'history', 'Overdue', true, true))
 
         this.nodes.search_today = selector('div.searches .today')
-        this.nodes.search_today.addEventListener('click', (evt) => list_today(evt))
+        this.nodes.search_today.addEventListener('click', (evt) => this.list(by_today, 'today', 'Today', true, true))
 
         this.nodes.search_tomorrow = selector('div.searches .tomorrow')
-        this.nodes.search_tomorrow.addEventListener('click', (evt) => list_tomorrow(evt))
+        this.nodes.search_tomorrow.addEventListener('click', (evt) => this.list(by_tomorrow, 'event', 'Tomorrow', true, true))
 
         this.nodes.search_thisweek = selector('div.searches .thisweek')
-        this.nodes.search_thisweek.addEventListener('click', (evt) => list_thisweek(evt))
+        this.nodes.search_thisweek.addEventListener('click', (evt) => this.list(by_thisweek, 'view_week', 'This week', true, true))
 
         this.nodes.search_future = selector('div.searches .future')
-        this.nodes.search_future.addEventListener('click', (evt) => list_future(evt))
+        this.nodes.search_future.addEventListener('click', (evt) => this.list(by_future, 'calendar_month', 'After this week', true, true))
 
-
-
+        this.nodes.addtask = selector('.addTask')
+        this.nodes.addtask.addEventListener('click', evt => this.task_new(evt) )
     }
-    // list_all = (evt) => this.tasklist_all()
-    // }
-    // list_overdue = (evt) => {
+    list_seperator = (icon, label) => {
+        let clone = this.nodes.task_list_seperator_clone.cloneNode(true)
+        clone.querySelector('span.seperator').textContent = icon
+        clone.querySelector('span.label').textContent = label
+        return clone
+    }
+    list = (_filter, icon, label, pri, proj) => {
+        // hide away task detail 
+        this.nodes.task_detail_container.classList.replace('viz', 'xviz')
+        // filter the data using a given filter function
+        let _dset = _tasks.filter(_filter)  // _filter == e.g: _t =>  _t.date_due < yesterday )
+        this.clear_tasklist()
 
-    // }
-    // list_today = (evt) => {}
-    // list_tomorrow = (evt) => {}
-    // list_thisweek = (evt) => {}
-    // list_future = (evt) => {}
+        // set a heading
+        selector('div.task_list span.title').textContent = 'Pending actions: ' + label
+
+        // get the priority groups 
+        let _priorities = keys(priorities) // Array.from(new Set(_dset.map(_t => _t.priority)))
+        _priorities.forEach(_pri => {
+            // filter again for each priority
+            let _sdset = _dset.filter(_t => _t.priority === _pri)
+            if (_sdset.length > 0) {
+                // add a separator to the listing
+                let clone = this.list_seperator(priorities[_pri].icon, _pri)
+                this.nodes.task_list.appendChild(clone)
+
+                // iter each in group
+                _sdset.forEach(task => {
+                    let clone = this.tasklist_task(task, false, proj)
+                    clone.classList.add('addleftmargin')
+                    clone.addEventListener('click', (evt) => this.list_item_detail(evt))
+                    this.nodes.task_list.appendChild(clone)
+                })
+            }
+        })
+
+        
+        // _dset.sort(sort_priority)
+        // this.clear_tasklist()
+
+        // let clone = this.list_seperator(icon, label)
+        // this.nodes.task_list.appendChild(clone)
+        
+        // _dset.forEach(task => {
+        //     let clone = this.tasklist_task(task, pri, proj)
+        //     clone.addEventListener('click', (evt) => this.list_item_detail(evt))
+        //     this.nodes.task_list.appendChild(clone)
+        // })
+    }
+    delete_task = (evt) => {
+        let idx = _tasks.findIndex(_t => _t.id === evt.target.parentNode.getAttribute('data-id'))
+        tasks._del(idx)
+        _tasks = tasks._dump()
+        
+        this.nodes.task_list.removeChild(evt.target.parentNode)
+        evt.preventDefault()
+    }
 
     date_due = (evt) => {
         if (this.nodes.date_due.classList[1] == 'xviz') {
@@ -338,9 +343,18 @@ class taskInterface {
         }
     }
     date_due_change = (evt) => {
-        this.nodes.date_due_label.textContent = evt.target.value
+        this.nodes.date_due_label.textContent = new Date(evt.target.value).toLocaleDateString()
         this.nodes.date_due.classList.replace('viz', 'xviz')
-        this.values.date_due = evt.target.valueAsNumber
+
+        let li_id = evt.target.getAttribute('data-id')
+        let field = evt.target.classList[0]
+        let task = tasks._list.find(_tsk => _tsk.id === li_id)
+        
+        this.values[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
+        task[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
+        _tasks[_tasks.findIndex(_t => _t.id === li_id)] = task._dump()
+
+        // this.values.date_due = evt.target.valueAsNumber
     }
     date_done = (evt) => {
         if (this.nodes.date_done.classList[1] == 'xviz') {
@@ -353,144 +367,195 @@ class taskInterface {
         }
     }
     date_done_change = (evt) => {
-        this.nodes.date_done_label.textContent = evt.target.value
+        this.nodes.date_done_label.textContent = new Date(evt.target.value).toLocaleDateString()
         this.nodes.date_done.classList.replace('viz', 'xviz')
 
-        this.values.date_done = evt.target.valueAsNumber
+        let li_id = evt.target.getAttribute('data-id')
+        let field = evt.target.classList[0]
+        let task = tasks._list.find(_tsk => _tsk.id === li_id)
+        
+        this.values[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
+        task[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
+        _tasks[_tasks.findIndex(_t => _t.id === li_id)] = task._dump()
     }
-
     checklist_li_done = (evt) => {
         let parent = evt.target.parentNode
         let li_id = parent.getAttribute('data-id')
-        evt.target.textContent = evt.target.textContent == 'check_box' ? 'check_box_outline_blank' : 'check_box'
-        this.values.checklist.find(item => item.id === li_id).status = evt.target.textContent == 'check_box' ? true : false
-    }
+        let task_id = parent.getAttribute('data-task_id')
+        let status  = evt.target.textContent == 'check_box' ? false : true; // toggles: status is opposite of clicked state 
+        let checklist_idx = this.values.checklist.findIndex(item => item.id === li_id)
 
+        evt.target.textContent = status ? 'check_box' : 'check_box_outline_blank';
+        this.values.checklist[checklist_idx].status = status
+
+        let task = tasks._list.find(_tsk => _tsk.id === task_id)
+        task.checklist[checklist_idx].status = status; 
+        _tasks[_tasks.findIndex(_t => _t.id === task_id)] = task._dump()
+
+    }
     checklist_li_del = (evt) => {
         let parent = evt.target.parentNode
         let li_id = parent.getAttribute('data-id')
-        // evt.target.textContent = evt.target.textContent == 'check_box' ? 'check_box_outline_blank' : 'check_box'
-        this.values.checklist.splice(this.values.checklist.findIndex(item => item.id === li_id), 1)
+        let task_id = parent.getAttribute('data-task_id')
+        let checklist_idx = this.values.checklist.findIndex(item => item.id === li_id)
+
+        this.values.checklist.splice(checklist_idx, 1)
         this.nodes.checklist.removeChild(selector('[data-id="'+ li_id +'"]'))
+
+        let task = tasks._list.find(_tsk => _tsk.id === task_id)
+        task.checklist.splice(checklist_idx, 1)
+        _tasks[_tasks.findIndex(_t => _t.id === task_id)] = task._dump()
+
     }
     checklist_li_change = (evt) => {
         let parent = evt.target.parentNode
         let li_id = parent.getAttribute('data-id')
-        let _ = this.values.checklist.find(item => item.id === li_id)
-        _.subtask = evt.target.value;
+        let task_id = parent.getAttribute('data-task_id')
+        let checklist_item = this.values.checklist.find(item => item.id === li_id)
+        checklist_item.subtask = evt.target.value;
+
+        let task = tasks._list.find(_tsk => _tsk.id === task_id)
+        let checklist_idx = task.checklist.findIndex(item => item.id == li_id)
+        
+        task.checklist[checklist_idx].subtask = evt.target.value
+        
+        _tasks[_tasks.findIndex(_t => _t.id === li_id)] = task._dump()
+
+    }
+    checklist_add_item = (evt) => {
+        let clone = this.nodes.checklist_li_clone.cloneNode(true)
+        let li_id = uuid()
+        let subtask = { id: li_id, status: false, subtask: '' }
+        let task_id = this.nodes.checklist.getAttribute('data-task_id')
+
+        this.values.checklist.push(subtask)
+        let task_idx = tasks._list.findIndex(_tsk => _tsk.id === task_id)
+        let task = tasks._list[task_idx]
+
+        task._checklist_add({id: li_id, status: false, subtask: ''})
+        
+        _tasks[task_idx] = task._dump()
+
+        clone.setAttribute('data-id', li_id)
+        clone.setAttribute('data-task_id', task_id)
+
+        clone.querySelector('input.subtask').addEventListener('change', evt => this.checklist_li_change(evt))
+        clone.querySelector('span.done').addEventListener('click', evt => this.checklist_li_done(evt))
+        clone.querySelector('span.del').addEventListener('click', evt => this.checklist_li_del(evt))
+
+        this.nodes.checklist.appendChild(clone)  
+
+    }
+    task_change = (evt) => {
+        //let parent = evt.target.parentNode
+        let li_id = evt.target.getAttribute('data-id')
+        let field = evt.target.classList[0]
+        let task = tasks._list.find(_tsk => _tsk.id === li_id)
+        if (field === 'priority') { evt.target.previousElementSibling.textContent = priorities[evt.target.value].icon }
+        this.values[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
+        task[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
+        _tasks[_tasks.findIndex(_t => _t.id === li_id)] = task._dump()
+        
+    }
+    task_new = () => {
+        // this.nodes.task_list.classList.add('xviz')
+        let _blank = new Task('');
+        this.values = _blank;
+        this.set_fields(_blank)
+        tasks._add(_blank)
+        _tasks = tasks._dump()
     }
 
-    set_fields(task) {
-        let _task =task._dump()
-        let _keys = keys(_task)
-        // this.values = {}
-        this.nodes.checklist.querySelectorAll('li').forEach(_li => this.nodes.checklist.removeChild(_li))
-        _keys.forEach(_k => {
-            if (_task[_k] instanceof Array) {
-                // iterate thru checklist
-                if (!this.values[_k]) { this.values[_k] = [] }
-                _task[_k].forEach(item => {
-                    this.values[_k].push(item)
-                    let clone = this.nodes.checklist_li_clone.cloneNode(true)
-                    clone.setAttribute('data-id', item.id)
-                    clone.querySelector('span.done').textContent = item.status ? 'check_box' : 'check_box_outline_blank'
-                    clone.querySelector('input').value = item.subtask 
+    list_item_detail = (evt) => {
+        try {
+            this.nodes.task_list.querySelectorAll('li.task').forEach(li => li.querySelector('div').classList.remove('highlight'))
+            console.log(evt)
+            console.log(evt.target)
+            evt.target.parentNode.classList.add('highlight')
+            let id = evt.target.parentNode.parentNode.getAttribute('data-id')
+            let _t = _tasks.find(tsk => tsk.id == id)
+            console.log([id, _t])
+            this.set_fields(_t)    
+        } catch (e) { 
+            // caused by delete of list item node
+        }
+    }
 
-                    clone.querySelector('input.subtask').addEventListener('change', evt => this.checklist_li_change(evt))
-                    clone.querySelector('span.done').addEventListener('click', evt => this.checklist_li_done(evt))
-                    clone.querySelector('span.del').addEventListener('click', evt => this.checklist_li_del(evt))
+    set_fields(_task) {
+        try {
+            this.values = {}
+            this.nodes.task_detail_container.classList.replace('xviz', 'viz')
+            let _keys = keys(_task)
+            this.nodes.checklist.querySelectorAll('li').forEach(_li => this.nodes.checklist.removeChild(_li))
+            this.nodes.checklist.setAttribute('data-task_id', _task.id )
+            _keys.forEach(_k => {
+                if (_task[_k] instanceof Array) { // if the checklist
+                    // iterate thru checklist
+                    if (!this.values[_k]) { this.values[_k] = [] }
+                    _task[_k].forEach(item => {
+                        this.values[_k].push(item)
+                        let clone = this.nodes.checklist_li_clone.cloneNode(true)
+                        clone.setAttribute('data-id', item.id)
+                        clone.setAttribute('data-task_id', _task.id )
+                        clone.querySelector('span.done').textContent = item.status ? 'check_box' : 'check_box_outline_blank'
+                        clone.querySelector('input').value = item.subtask 
+        
+                        clone.querySelector('input.subtask').addEventListener('change', evt => this.checklist_li_change(evt))
+                        clone.querySelector('span.done').addEventListener('click', evt => this.checklist_li_done(evt))
+                        clone.querySelector('span.del').addEventListener('click', evt => this.checklist_li_del(evt))
+                        this.nodes.checklist.appendChild(clone)                           
+                    })
+                } else {
+                    if (!this.values[_k]) { this.values[_k] = _task[_k] }
+                    // set values directly
+                    if (this.nodes[_k] && this.nodes[_k].type === 'text') {
+                        this.nodes[_k].value = _task[_k]
+                        this.nodes[_k].setAttribute('data-id', _task.id)
+                        this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
 
-                    this.nodes.checklist.appendChild(clone)                           
-                })
-            } else {
-                if (!this.values[_k]) { this.values[_k] = _task[_k] }
-                // set values directly
-                if (this.nodes[_k] && this.nodes[_k].type == 'text') {
-                    this.nodes[_k].value = _task[_k]
-                } else if (this.nodes[_k] && this.nodes[_k].type == 'select-one') {
-                    this.nodes[_k].value = _task[_k]
-                } else if (this.nodes[_k] && this.nodes[_k].type == 'date') {
-                    this.nodes[_k].valueAsNumber = _task[_k]
-                    // itask.nodes['date_due' + '_label'].textContent = new Date(itask.values['date_due']).toLocaleDateString() 
-                    this.nodes[_k + '_label'].textContent = _task[_k] == -1 ? 'not set' : new Date(_task[_k]).toLocaleDateString()
+                    } else if (this.nodes[_k] && this.nodes[_k].type === 'select-one') {
+                        this.nodes[_k].value = _task[_k]
+                        this.nodes[_k].setAttribute('data-id', _task.id)
+                        this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+                        if (this.nodes[_k].classList[0] === 'priority') { this.nodes[_k].previousElementSibling.textContent = priorities[_task[_k]].icon }
+                        if (this.nodes[_k].classList[0] === 'project') { this.nodes[_k].previousElementSibling.textContent = projects[_task[_k]].icon }
+                    } else if (this.nodes[_k] && this.nodes[_k].type === 'date') {
+                        if (!(_task[_k] == '' || _task[_k] == -1) ) {
+                            this.nodes[_k].valueAsNumber = _task[_k]
+                            this.nodes[_k].setAttribute('data-id', _task.id)
+                            this.nodes[_k + '_label'].setAttribute('data-id', _task.id)
+                            this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+                            this.nodes[_k + '_label'].textContent = new Date(_task[_k]).toLocaleDateString() // _task[_k] == -1 ? 'not set' : 
+                        } else {
+                            this.nodes[_k].setAttribute('data-id', _task.id)
+                            this.nodes[_k + '_label'].setAttribute('data-id', _task.id)
+                            this.nodes[_k + '_label'].textContent = '- date not set'
+                        }
+                        
+                    }
                 }
-            }
-        })
+            })
+        } catch (e) {
+            console.log(_task)
+            console.log(keys(_task))                        
+        }
     }
 
-    // item: json task 
-    tasklist_item = (item) => {
+    // _task: json task 
+    tasklist_task = (_task, pri, proj) => {
         let clone = this.nodes.task_list_task_clone.cloneNode(true)
-        clone.setAttribute('data-id', item.id)
-        let priority = '-'
-        let project = '-'
-        switch (item.priority) {
-            case 'urgent':
-            case 'elevated':
-                priority = 'priority_high';
-                break;
-            case 'moderate':
-                priority = 'priority'
-                break;
-            default:
-                priority = 'low_priority'
-        }
-        switch (item.project) {
-            case 'home':
-                project = 'home';
-                break;
-            case 'work':
-                project = 'apartment'
-                break;
-            case 'health':
-                project = 'ecg'
-                break;
-            case 'growth':
-                project = 'school'
-                break;
-            case 'family':
-                project = 'family_restroom'
-                break;
-            case 'leisure':
-                project = 'hiking';
-                break;
-            default:
-                project = ''
-        }
-        clone.querySelector('span.priority').textContent = priority  
-        clone.querySelector('span.project').textContent = project
-        clone.querySelector('span.date_due').textContent = new Date(item.date_due).toLocaleDateString()
-        clone.querySelector('span.description').textContent = item.description 
-        // this.nodes.task_list.appendChild(clone)
-        return clone
-    }
-
-    // item: json task 
-    tasklist_task = (item, pri, proj) => {
-        let clone = this.nodes.task_list_task_clone.cloneNode(true)
-        clone.setAttribute('data-id', item.id)
-        let priority = '-'
+        clone.setAttribute('data-id', _task.id)
+        let li_content = clone.querySelector('div')
         let project = '-'
         if (pri) {
-            switch (item.priority) {
-                case 'urgent':
-                case 'elevated':
-                    priority = 'priority_high';
-                    break;
-                case 'moderate':
-                    priority = 'priority'
-                    break;
-                default:
-                    priority = 'low_priority'
-            }
-            clone.querySelector('span.priority').textContent = priority  
+            li_content.querySelector('span.priority').textContent = priorities[_task.priority].icon // priority  
         } else {
-            clone.removeChild(clone.querySelector('span.priority'))
+            li_content.removeChild(li_content.querySelector('span.priority'))
         }
         if (proj) {
-            switch (item.project) {
-                case '_':
-                    project = '';
+            switch (_task.project) {
+                case 'unassigned':
+                    project = 'remove';
                     break;
                 case 'home':
                     project = 'home';
@@ -513,67 +578,177 @@ class taskInterface {
                 default:
                     project = ''
             }
-	        clone.querySelector('span.project').textContent = project  
+	        li_content.querySelector('span.project').textContent = project  
         } else {
-            clone.removeChild(clone.querySelector('span.project'))
+
+            li_content.removeChild(li_content.querySelector('div span.project'))
         }
 
 
         // clone.querySelector('span.project').textContent = project
-        clone.querySelector('span.date_due').textContent = new Date(item.date_due).toLocaleDateString()
-        clone.querySelector('span.description').textContent = item.description 
+        let dt = parseInt(Date.now()  / day_msecs + day_msecs)
+        let dt_diff = parseInt(_task.date_due / day_msecs + day_msecs)  - dt  
+        li_content.querySelector('span.date_due').textContent = dt_diff > 0 ? 'Due in ' + dt_diff + ' days' : 'Overdue ' + dt_diff * -1 + ' days' // new Date(_task.date_due).toLocaleDateString()
+        li_content.querySelector('span.description').textContent = _task.description 
         
+
+
+        li_content.addEventListener('click', evt => this.list_item_detail(evt))
+        clone.querySelector('div.del').addEventListener('click', evt => this.delete_task(evt))
         return clone
     }
-
     clear_tasklist () {
         this.nodes.task_list.querySelectorAll('li').forEach(li => this.nodes.task_list.removeChild(li))
     }
-    tasklist_all(list) { // default dump all and list list <-- sort and group !!!!
-        this.clear_tasklist()
-        let _list = list._dump()
-        _list.forEach(item => {
-            let clone = this.tasklist_item(item)
-            this.nodes.task_list.appendChild(clone)
-        })
 
-    } 
 }
 
 
 function page_config() {
-
+    
 
 }
 
     // execute 
     page_config()
 
+
+
+
+function fake_tasks() {
     lorem = "Lorem ipsum dolor sit amet consectetur adipisicing elit. Distinctio quidem, corrupti placeat dolor obcaecati quasi laudantium saepe sit, quos perferendis est similique necessitatibus numquam quisquam autem mollitia reiciendis! Rem, illum! Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel quibusdam, consequatur animi minus eius debitis obcaecati earum sapiente impedit, magnam labore molestias tempore non? Culpa voluptatibus voluptas provident adipisci nulla. Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam, minus harum molestiae velit sapiente odit consequuntur odio dolorum? Inventore consectetur accusamus error eveniet fugiat cupiditate, repudiandae culpa maxime pariatur aperiam."
-    tasklist = new Tasks()
+    projkeys = keys(projects)
+    tasks = new Tasks()
     for (n = 0; n < 36; n++) {
         _t = new Task(n + ' auto gen new task')
         _t._note(`${n} ${lorem.substring(parseInt(n * Math.random() * 15), 14)}`)
         _t._date_due(parseInt(Date.now() + ((Math.random() * 24) * day_msecs - (12 * day_msecs))))
         _t._priority( keys(priorities)[parseInt(Math.random() * 4)])
-        _t._project( projects[parseInt(Math.random() * projects.length)])
+        _t._project( projkeys[parseInt(Math.random() * projkeys.length)])
         M = parseInt(Math.random() * 5)
         for (m = 0; m < M; m++) {
             _t.checklist.push({ id: uuid(), status: false, subtask: lorem.substring(parseInt(m * Math.random() * 15), 14)})
         }
-        tasklist._add(_t)
+        tasks._add(_t)
     }
+    return tasks
+}
+
+fake_tasks()
+
+let itask = new taskInterface()
+
+/*    // localStorage.setItem('_tasks', jstr(tasks._dump()))
+    _tasks = jpar(localStorage.getItem('_tasks'))
+    _tasks.forEach(_task => {
+        let T = new Task(_task.description)
+        T._set(_task)
+        itask._add(T)
+    })
+*/
+    
+    
 
 
-// sorts
-by_priority = (a, b) => priorities[a.priority] < priorities[b.priority] // highest first (descending) if ascending [].reverse()
-by_project = (a, b) => a.project < b.project
-by_date = (a, b) => a.date_due < b.date_due
+// itask.set_fields(tasks._list[3])
+_tasks = tasks._dump()
 
-group_then_sort_each = (list, projects, sort_by) => {
+
+// itask.list(by_all, priorities, 'By Priority', false, true)
+
+
+
+
+
+
+
+
+
+
+
+
+// itask._blank = jpar(jstr(_tasks[0]));
+// keys(itask._blank).forEach(_k => {console.log(_k); itask._blank[_k] = ( itask._blank[_k] instanceof Array ? [] : '')})
+
+
+
+
+// tasks_by_timeframe = {
+//   	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
+//     today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
+//     tomorrow: _tasks.filter(_t =>  _t.date_due > today && _t.date_due < tomorrow ),
+//     restofweek: _tasks.filter(_t =>  _t.date_due > tomorrow && _t.date_due < thisweek ),
+//   	future:  _tasks.filter(_t =>  _t.date_due > thisweek )
+// }
+// tasks_by_timeframe_count = checksum(tasks_by_timeframe)
+// console.log(['tasks_by_timeframe_count',tasks_by_timeframe_count ])
+
+// tasks_by_project = (projects) => {
+//     by_project = {}
+//     projects.forEach()
+
+//     return {
+//         unassigned: _tasks.filter(_t => _t.project == '_' ),
+//         home: _tasks.filter(_t => _t.project == 'home' ),
+//         work: _tasks.filter(_t => _t.project == 'work' ),
+//         family: _tasks.filter(_t => _t.project == 'family' ),
+//         health: _tasks.filter(_t => _t.project == 'health' ),
+//         growth: _tasks.filter(_t => _t.project == 'growth' ),
+//         leisure: _tasks.filter(_t => _t.project == 'leisure' ),
+    
+//     }
+
+// }
+// tasks_by_project_count = checksum(tasks_by_project)
+// console.log(['tasks_by_group_count', tasks_by_project_count])
+
+// tasks_by_priority = {
+//     urgent: _tasks.filter(_t => _t.priority == 'urgent' ),
+//     elevated: _tasks.filter(_t => _t.priority == 'elevated' ),
+//     moderate: _tasks.filter(_t => _t.priority == 'moderate' ),
+//     low: _tasks.filter(_t => _t.priority == 'low' ),
+//     none: _tasks.filter(_t => _t.priority == 'none' ),
+    
+// }
+// tasks_by_priority_count = checksum(tasks_by_priority)
+// console.log(['tasks_by_priority_count', tasks_by_priority_count])
+
+// tomorrow_grps_srtd_pri = group_then_sort_each(tasks_by_timeframe.tomorrow, projects, by_priority)
+// all_priority_srt_grp = group_then_sort_each(_tasks, keys(priorities), by_project)
+
+// itask.clear_tasklist()
+// keys(tomorrow_grps_srtd_pri).forEach(grp => {
+//   if (tomorrow_grps_srtd_pri[grp].length) {
+//     let clone = itask.list_seperator(projects[grp].icon, grp)
+//     // clone = itask.nodes.task_list_seperator_clone.cloneNode(true)
+//     // clone.querySelector('span.seperator').textContent = projects[grp].icon
+//     // clone.querySelector('span.label').textContent = grp
+//     itask.nodes.task_list.appendChild(clone)
+//         tomorrow_grps_srtd_pri[grp].forEach(task => {
+//                 item = itask.tasklist_task(task, true, false)
+//                 itask.nodes.task_list.appendChild(item)
+//               })        
+//   }
+// })
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+group_then_sort_each = (list, fields, sort_by) => {
     groups_sorted = {}
-    projects.forEach(prj => {
-        groups_sorted[prj] = list.filter(tsk => tsk.project == prj).sort(sort_by)
+    fields.forEach(fld => {
+        groups_sorted[fld] = list.filter(tsk => tsk[fld] == fld).sort(sort_by)
     })
   return groups_sorted
 }
@@ -584,67 +759,7 @@ checksum = (tasks_by) => {
     return tasks_by_res
 }
 
-let itask = new taskInterface()
-// itask.set_fields(tasklist._tasklist[3])
-
-itask.tasklist_all(tasklist)
-
-_tasks = tasklist._dump()
-
-tasks_by_timeframe = {
-  	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
-    today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
-    tomorrow: _tasks.filter(_t =>  _t.date_due > today && _t.date_due < tomorrow ),
-    restofweek: _tasks.filter(_t =>  _t.date_due > tomorrow && _t.date_due < thisweek ),
-  	future:  _tasks.filter(_t =>  _t.date_due > thisweek )
-}
-tasks_by_timeframe_count = checksum(tasks_by_timeframe)
-console.log(['tasks_by_timeframe_count',tasks_by_timeframe_count ])
-
-tasks_by_group = {
-    unassigned: _tasks.filter(_t => _t.project == '_' ),
-    home: _tasks.filter(_t => _t.project == 'home' ),
-    work: _tasks.filter(_t => _t.project == 'work' ),
-    family: _tasks.filter(_t => _t.project == 'family' ),
-    health: _tasks.filter(_t => _t.project == 'health' ),
-    growth: _tasks.filter(_t => _t.project == 'growth' ),
-    leisure: _tasks.filter(_t => _t.project == 'leisure' ),
-
-}
-tasks_by_group_count = checksum(tasks_by_group)
-console.log(['tasks_by_group_count', tasks_by_group_count])
-
-tasks_by_priority = {
-    urgent: _tasks.filter(_t => _t.priority == 'urgent' ),
-    elevated: _tasks.filter(_t => _t.priority == 'elevated' ),
-    moderate: _tasks.filter(_t => _t.priority == 'moderate' ),
-    low: _tasks.filter(_t => _t.priority == 'low' ),
-    none: _tasks.filter(_t => _t.priority == 'none' ),
-    
-}
-tasks_by_priority_count = checksum(tasks_by_priority)
-console.log(['tasks_by_priority_count', tasks_by_priority_count])
-
-tomorrow_grps_srtd_pri = group_then_sort_each(tasks_by_timeframe.tomorrow, projects, by_priority)
-all_priority_srt_grp = group_then_sort_each(_tasks, keys(priorities), by_project)
-
-itask.clear_tasklist()
-keys(tomorrow_grps_srtd_pri).forEach(grp => {
-  if (tomorrow_grps_srtd_pri[grp].length) {
-    clone = itask.nodes.task_list_seperator_clone.cloneNode(true)
-    clone.querySelector('span.seperator').textContent = _projects[grp].icon
-    clone.querySelector('span.label').textContent = grp
-    itask.nodes.task_list.appendChild(clone)
-        tomorrow_grps_srtd_pri[grp].forEach(task => {
-                item = itask.tasklist_task(task, true, false)
-                itask.nodes.task_list.appendChild(item)
-              })        
-  }
-})
-
-/*
-
-_tasks = tasklist._dump()
+_tasks = tasks._dump()
 tasks_by_timeframe = {
   	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
     today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
@@ -792,12 +907,12 @@ let priorities = {
 //   }
 
 
-//    tasklist = new Tasks()
-//     tasklist._add(t1)
-//     tasklist._add(t2)
+//    tasks = new Tasks()
+//     tasks._add(t1)
+//     tasks._add(t2)
 
 
-// task = tasklist._get(_t1.id)
+// task = tasks._get(_t1.id)
 // _task = task._dump()
 
 
@@ -844,7 +959,7 @@ let priorities = {
 
     date_done = selector('.date_done')    // .value = '2023-06-31'
     date_done.addEventListener('click', (evt) => {
-        t = tasklist._get(task_id_val)
+        t = tasks._get(task_id_val)
     t._date_done(Date.now())
     
     })
@@ -896,7 +1011,7 @@ let priorities = {
         textContent(selector('.project .label'), task.project)
 
 
-        // build the tasklist
+        // build the tasks
         task.checklist.forEach(t => {
             li = checklist_li_clone.cloneNode(true)
             li.querySelector('.label').textContent = t.subtask
@@ -931,7 +1046,7 @@ let priorities = {
         // should have validation to check all checklist subtasks are complete
         date_done = selector('.date_done')    // .value = '2023-06-31'
         date_done.addEventListener('click', (evt) => {
-            t = tasklist._get(task.id)
+            t = tasks._get(task.id)
             t._date_done(Date.now())
         })
     
