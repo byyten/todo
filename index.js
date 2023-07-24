@@ -25,9 +25,6 @@ let priorities = {
     none: { icon: 'low_priority', text: 'none' },
 }
 
-let _completed = []
-
-// let projects = ['unassigned','home','family','work','health','growth','leisure']
 let projects = {
     unassigned: { icon: 'warning', text: 'unassigned' },
     home: { icon: 'home', text: 'home' },
@@ -37,6 +34,9 @@ let projects = {
     growth: { icon: 'school', text: 'growth' },
     leisure: { icon: 'hiking', text: 'leisure' }, 
 }
+
+let _tasks = []
+let _completed = []
 
 
 jstr = (_in) => JSON.stringify(_in)
@@ -157,11 +157,10 @@ class Tasks  {
     _del = (idx) => this._list.splice(idx, 1) // delete
 
     // _dump = () =>  this._list.map(task => task._dump())
-    _dump = () => {
-        this._list = this._list.filter(_t => !(_t.description === '' && _t.date_due === -1 &&  _t.project == 'unassigned' && _t.priority == 'none') )
-        this._list.map(task => task._dump())
-        return this._list
-    }
+    _dump = () =>  this._list
+            .filter(_t => !(_t.description === '' && _t.date_due === -1 &&  _t.project == 'unassigned' && _t.priority == 'none'))
+            .map(task => task._dump())
+    
     _filter = (field, val) => this._list.filter(t => t[field] === val) 
     _sort = (field, dir) => { return (dir == 'asc' || dir == 'a' || dir == 'A' ? this._list.sort((a, b) => a[field] - b[field]) : this._list.sort((a, b) => b[field] - a[field]))}
     _import = (tasks) => {
@@ -188,12 +187,18 @@ class Tasks  {
 class taskInterface {
     constructor() {
         this.projects = projects
-        // this._blank = { }
+        this.priorities = priorities
+
         this.nodes = { }
         this.values = { }
 
         this.nodes.task_detail_container = selector('div.task_detail')
         // this.nodes.task_detail_save = selector('div.task_detail span.save')
+        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+        let inputs = Array.from(this.nodes.task_detail_container.querySelectorAll('input, select')).slice(0,7)
+        inputs.forEach(_in => _in.addEventListener('change', (evt) => this.task_change(evt)))
 
         this.nodes.task_list_container = selector('div.task_list')
 
@@ -295,6 +300,7 @@ class taskInterface {
     }
     list = (_filter, icon, label, pri, proj) => {
         // hide away task detail 
+        //this.nodes.task_list_container.classList.replace('xviz','viz')
         this.nodes.task_detail_container.classList.replace('viz', 'xviz')
         // filter the data using a given filter function
         let _dset = _tasks.filter(_filter)  // _filter == e.g: _t =>  _t.date_due < yesterday )
@@ -322,24 +328,12 @@ class taskInterface {
                 })
             }
         })
-
-        
-        // _dset.sort(sort_priority)
-        // this.clear_tasklist()
-
-        // let clone = this.list_seperator(icon, label)
-        // this.nodes.task_list.appendChild(clone)
-        
-        // _dset.forEach(task => {
-        //     let clone = this.tasklist_task(task, pri, proj)
-        //     clone.addEventListener('click', (evt) => this.list_item_detail(evt))
-        //     this.nodes.task_list.appendChild(clone)
-        // })
     }
     delete_task = (evt) => {
         let idx = _tasks.findIndex(_t => _t.id === evt.target.parentNode.getAttribute('data-id'))
         tasks._del(idx)
         _tasks = tasks._dump()
+        local_save()
         this.nodes.task_detail_container.classList.replace('viz', 'xviz')
         this.nodes.task_list.removeChild(evt.target.parentNode)
         evt.preventDefault()
@@ -403,7 +397,7 @@ class taskInterface {
             _completed.push(completed._dump()) // storage to archival
             // update _tasks
             _tasks = tasks._dump()
-
+            local_save()
             // reset the detail form to normal
             this.nodes.date_done.classList.replace('viz', 'xviz')
             this.nodes.task_detail_container.classList.replace('viz', 'xviz')
@@ -497,18 +491,25 @@ class taskInterface {
         let field = evt.target.classList[0]
         let task = tasks._list.find(_tsk => _tsk.id === li_id)
         if (field === 'priority') { evt.target.previousElementSibling.textContent = priorities[evt.target.value].icon }
+        if (field === 'project') { evt.target.previousElementSibling.textContent = projects[evt.target.value].icon }
         this.values[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
         task[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
-        _tasks[_tasks.findIndex(_t => _t.id === li_id)] = task._dump()
+        // task['_' + field]( evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value)
+        let idx = _tasks.findIndex(_t => _t.id === li_id)
+        _tasks[idx] = task._dump()
         
     }
     task_new = () => {
         // this.nodes.task_list.classList.add('xviz')
-        let _blank = new Task('');
-        this.values = _blank;
-        this.set_fields(_blank)
+        let desc = prompt('Provide a brief , succinct task description')
+        if (desc === null) { return }
+        let _blank = new Task(desc);
+        // this.nodes.task_list_container.classList.replace('viz','xviz')
+        this.values = _blank._dump();
+        this.set_fields(_blank._dump())
         tasks._add(_blank)
         _tasks = tasks._dump()
+        local_save()
     }
     list_item_detail = (evt) => {
         try {
@@ -555,12 +556,13 @@ class taskInterface {
                     if (this.nodes[_k] && this.nodes[_k].type === 'text') {
                         this.nodes[_k].value = _task[_k]
                         this.nodes[_k].setAttribute('data-id', _task.id)
-                        this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+                        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+
 
                     } else if (this.nodes[_k] && this.nodes[_k].type === 'select-one') {
                         this.nodes[_k].value = _task[_k]
                         this.nodes[_k].setAttribute('data-id', _task.id)
-                        this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+                        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
                         if (this.nodes[_k].classList[0] === 'priority') { this.nodes[_k].previousElementSibling.textContent = priorities[_task[_k]].icon }
                         if (this.nodes[_k].classList[0] === 'project') { this.nodes[_k].previousElementSibling.textContent = projects[_task[_k]].icon }
                     } else if (this.nodes[_k] && this.nodes[_k].type === 'date') {
@@ -568,7 +570,7 @@ class taskInterface {
                             this.nodes[_k].valueAsNumber = _task[_k]
                             this.nodes[_k].setAttribute('data-id', _task.id)
                             this.nodes[_k + '_label'].setAttribute('data-id', _task.id)
-                            this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
+                            // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
                             this.nodes[_k + '_label'].textContent = new Date(_task[_k]).toLocaleDateString() // _task[_k] == -1 ? 'not set' : 
                         } else {
                             this.nodes[_k].setAttribute('data-id', _task.id)
@@ -683,10 +685,10 @@ function page_config() {
 
 
 
-function fake_tasks() {
+function fake_tasks(tasks) {
     lorem = "Lorem ipsum dolor sit amet consectetur adipisicing elit. Distinctio quidem, corrupti placeat dolor obcaecati quasi laudantium saepe sit, quos perferendis est similique necessitatibus numquam quisquam autem mollitia reiciendis! Rem, illum! Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel quibusdam, consequatur animi minus eius debitis obcaecati earum sapiente impedit, magnam labore molestias tempore non? Culpa voluptatibus voluptas provident adipisci nulla. Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam, minus harum molestiae velit sapiente odit consequuntur odio dolorum? Inventore consectetur accusamus error eveniet fugiat cupiditate, repudiandae culpa maxime pariatur aperiam."
     projkeys = keys(projects)
-    tasks = new Tasks()
+    
     for (n = 0; n < 36; n++) {
         _t = new Task(n + ' auto gen new task')
         _t._note(`${n} ${lorem.substring(parseInt(n * Math.random() * 15), 14)}`)
@@ -702,16 +704,40 @@ function fake_tasks() {
     return tasks
 }
 
-fake_tasks()
+// fake_tasks()
+
+function local_save() {
+    localStorage.setItem('_tasks', jstr(_tasks))
+    localStorage.setItem('_completed', jstr(_completed))
+}
+
+
 
 let itask = new taskInterface()
-
-/*    // localStorage.setItem('_tasks', jstr(tasks._dump()))
+let tasks = new Tasks()
+_tasks = []
+try {
     _tasks = jpar(localStorage.getItem('_tasks'))
     _tasks.forEach(_task => {
         let T = new Task(_task.description)
         T._set(_task)
-        itask._add(T)
+        tasks._add(T)
+    })    
+    _completed = jpar(localStorage.getItem('_completed'))
+} catch (e) {
+    _tasks = []
+}
+
+
+
+
+/*    
+// localStorage.setItem('_tasks', jstr(tasks._dump()))
+    _tasks = jpar(localStorage.getItem('_tasks'))
+    _tasks.forEach(_task => {
+        let T = new Task(_task.description)
+        T._set(_task)
+        tasks._add(T)
     })
 */
     
@@ -719,7 +745,10 @@ let itask = new taskInterface()
 
 
 // itask.set_fields(tasks._list[3])
-_tasks = tasks._dump()
+
+// let tasks = new Tasks()
+// tasks = fake_tasks(tasks)
+// _tasks = tasks._dump()
 
 
 // itask.list(by_all, priorities, 'By Priority', false, true)

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TasKing</title>
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" />
     <link rel="stylesheet" href="style.css">
     <script defer src="index.js"></script>
 </head>
@@ -13,10 +13,10 @@
     <div class="container">
         <div class="header">
             <ul class="menu">
-                <li class="addTask" title="Add a task">
+                <!-- <li class="addTask" title="Add a task">
                     <span class="material-symbols-outlined">add</span>
-                    <span class="label">add task</span>
-                </li>
+                    <span class="label title">Add new task</span>
+                </li> -->
                 <!-- <li class="addProject" title="Add a task category">
                     <span class="material-symbols-outlined">category</span>
                     <span class="label">add category</span>
@@ -31,7 +31,7 @@
             <div class="searches">
                 <div class="heading">
                     <span class="material-symbols-outlined">move_to_inbox</span>
-                    <span class="inbox title">Inbox</span>
+                    <span class="label title">Inbox</span>
                 </div>
                 <!-- canned searches - quick access -->
                 <ul class="searches">
@@ -95,9 +95,16 @@
             <!-- details work area -->
             <div class="detail">
                 <div class="task_list viz">
-                    <div class="heading">
-                        <span class="material-symbols-outlined">pending_actions</span>
-                        <span class="title">Outstanding Tasks</span>
+                    <div class="tasklist_heading">
+                        <div class="tasklist">
+                            <span class="material-symbols-outlined">pending_actions</span>
+                            <span class="label title">Outstanding Tasks</span>    
+                        </div>
+                        <div class="addTask" title="Add a task">
+                            <span class="material-symbols-outlined">add</span>
+                            <span class="label title">Add new task</span>
+                        </div>
+
                     </div>
                     <ul class="task_list">
                         <li class="task">
