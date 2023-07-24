@@ -671,6 +671,7 @@ try {
         let T = new Task(_task.description)
         T._set(_task)
         tasks._add(T)
+        itask.list(by_all, priorities, 'By Priority', true, true)
     })    
     _completed = jpar(localStorage.getItem('_completed'))
 } catch (e) {

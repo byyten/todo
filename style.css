@@ -141,7 +141,7 @@ li input {
 
 
 .container {
-    margin: 10%;
+    margin: 2% 10%;
     display: grid;
     grid-template-columns: 1fr 2fr 2fr;
     grid-template-rows: 5rem 6fr 1fr;
