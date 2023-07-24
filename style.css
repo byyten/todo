@@ -1,6 +1,7 @@
 @font-face {
     font-family: 'OpenSans';
     src: url('./OpenSans.ttf');
+    
 }
 
 .viz { visibility: visible; }
@@ -32,6 +33,7 @@ body {
     font-family:Verdana, Geneva, Tahoma, sans-serif;
     font-weight: 100;
     font-size: 12px;
+    color: rgb(41, 40, 40);
 }
 
 span.label {
@@ -40,6 +42,11 @@ span.label {
     vertical-align: top;
 }
 
+span.title {
+    font-size: larger;
+    font-weight: 500;
+    color: darkslategray;
+}
 ul {
     list-style: none;
 }
@@ -118,7 +125,7 @@ li input {
         /* margin-right: 1rem; */
         /* transform: scale(0.5); */
         /* min-width: 40px; */
-        color:rgb(102, 102, 104);
+        color:rgb(186, 186, 190);
         cursor: default;
         
 }
@@ -152,6 +159,8 @@ li input {
 
     align-content: start;
     height: 1fr;
+    padding-left: 5rem;
+    
 }
 
 .footer {

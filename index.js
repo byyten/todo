@@ -25,15 +25,17 @@ let priorities = {
     none: { icon: 'low_priority', text: 'none' },
 }
 
+let _completed = []
+
 // let projects = ['unassigned','home','family','work','health','growth','leisure']
 let projects = {
-    unassigned: { icon: 'warning' },
-    home: { icon: 'home' },
-    family: { icon: 'family_restroom' },
-    work: { icon: 'apartment' },
-    health: { icon: 'health_metrics' },
-    growth: { icon: 'school' },
-    leisure: { icon: 'hiking' }, 
+    unassigned: { icon: 'warning', text: 'unassigned' },
+    home: { icon: 'home', text: 'home' },
+    family: { icon: 'family_restroom', text: 'family' },
+    work: { icon: 'apartment', text: 'work' },
+    health: { icon: 'health_metrics', text: 'health' },
+    growth: { icon: 'school', text: 'growth' },
+    leisure: { icon: 'hiking', text: 'leisure' }, 
 }
 
 
@@ -87,8 +89,8 @@ class Task  {
     constructor(description, date_create) {
         this.id = uuid()
         this.description = description
-        this.project = ''
-        this.priority = priorities[0]
+        this.project = projects.unassigned.text
+        this.priority = priorities.none.text
         this.date_create = date_create || Date.now()
         this.date_due = -1
         this.date_done = -1
@@ -154,7 +156,12 @@ class Tasks  {
     // _del = (id) => this._list.splice(this._list.find(_t => _t.id === id), 1) // delete
     _del = (idx) => this._list.splice(idx, 1) // delete
 
-    _dump = () => this._list.map(task => task._dump())
+    // _dump = () =>  this._list.map(task => task._dump())
+    _dump = () => {
+        this._list = this._list.filter(_t => !(_t.description === '' && _t.date_due === -1 &&  _t.project == 'unassigned' && _t.priority == 'none') )
+        this._list.map(task => task._dump())
+        return this._list
+    }
     _filter = (field, val) => this._list.filter(t => t[field] === val) 
     _sort = (field, dir) => { return (dir == 'asc' || dir == 'a' || dir == 'A' ? this._list.sort((a, b) => a[field] - b[field]) : this._list.sort((a, b) => b[field] - a[field]))}
     _import = (tasks) => {
@@ -181,11 +188,13 @@ class Tasks  {
 class taskInterface {
     constructor() {
         this.projects = projects
-        this._blank = { }
+        // this._blank = { }
         this.nodes = { }
         this.values = { }
 
         this.nodes.task_detail_container = selector('div.task_detail')
+        // this.nodes.task_detail_save = selector('div.task_detail span.save')
+
         this.nodes.task_list_container = selector('div.task_list')
 
         this.nodes.task_list = selector('ul.task_list')
@@ -219,7 +228,8 @@ class taskInterface {
         
         this.nodes.date_due = selector('input.date_due')
         this.nodes.date_due.addEventListener('change', evt => this.date_due_change(evt))
-        
+        // this.nodes.date_due_mark_done = selector('span.mark_done')
+
         this.nodes.date_done_label = selector('.date_done .label')
         this.nodes.date_done_label.addEventListener('click', evt => this.date_done(evt))
 
@@ -330,7 +340,7 @@ class taskInterface {
         let idx = _tasks.findIndex(_t => _t.id === evt.target.parentNode.getAttribute('data-id'))
         tasks._del(idx)
         _tasks = tasks._dump()
-        
+        this.nodes.task_detail_container.classList.replace('viz', 'xviz')
         this.nodes.task_list.removeChild(evt.target.parentNode)
         evt.preventDefault()
     }
@@ -367,17 +377,52 @@ class taskInterface {
         }
     }
     date_done_change = (evt) => {
-        this.nodes.date_done_label.textContent = new Date(evt.target.value).toLocaleDateString()
-        this.nodes.date_done.classList.replace('viz', 'xviz')
-
-        let li_id = evt.target.getAttribute('data-id')
-        let field = evt.target.classList[0]
-        let task = tasks._list.find(_tsk => _tsk.id === li_id)
+        let datedone = evt.target.valueAsNumber
+        let inconsistent = false
+        // validation
+        if (datedone > Date.now()) { 
+            inconsistent = true 
+            let resp = confirm('Inconsistent dates:\nCompleted date is in the future\nOK to proceed with future date (logical inconsistent)\nCancel to alter date')
+            if (!resp) {
+                return
+            } 
+        } 
         
-        this.values[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
-        task[field] = evt.target.type === 'date' ? evt.target.valueAsNumber : evt.target.value
-        _tasks[_tasks.findIndex(_t => _t.id === li_id)] = task._dump()
-    }
+        // date is ok - but checks to make sure not before created should be done
+            this.nodes.date_done_label.textContent = new Date(datedone).toLocaleDateString()
+
+            let li_id = evt.target.getAttribute('data-id')
+            let field = evt.target.classList[0]
+            let idx = tasks._list.findIndex(_tsk => _tsk.id === li_id)
+            // set date_done value of the current selected task, the task (class) and then dump to json
+            this.values[field] = datedone 
+            tasks._list[idx][field] = datedone 
+
+            // splice out the completed task and push to archive
+            let completed = tasks._list.splice(idx, 1)[0]
+            _completed.push(completed._dump()) // storage to archival
+            // update _tasks
+            _tasks = tasks._dump()
+
+            // reset the detail form to normal
+            this.nodes.date_done.classList.replace('viz', 'xviz')
+            this.nodes.task_detail_container.classList.replace('viz', 'xviz')
+                        
+            let li_tasks = Array.from(this.nodes.task_list.querySelectorAll('li.task'))
+            let done_task_idx = li_tasks.findIndex(li => li.getAttribute('data-id') === li_id)
+            let li_task = li_tasks[done_task_idx]
+            
+            li_task.querySelector('div').style.backgroundColor = 'transparent'
+            li_task.querySelector('span.date_due')
+            // to avoid possible deletion
+            li_task.querySelector('div.del').classList.add('xviz')
+
+            li_task.querySelector('span.date_due').textContent = 'Completed'
+            li_task.querySelector('span.date_due').style.color = 'green'
+
+            li_task.querySelector('span.description').style.color = 'green'
+
+    } 
     checklist_li_done = (evt) => {
         let parent = evt.target.parentNode
         let li_id = parent.getAttribute('data-id')
@@ -465,7 +510,6 @@ class taskInterface {
         tasks._add(_blank)
         _tasks = tasks._dump()
     }
-
     list_item_detail = (evt) => {
         try {
             this.nodes.task_list.querySelectorAll('li.task').forEach(li => li.querySelector('div').classList.remove('highlight'))
@@ -588,7 +632,25 @@ class taskInterface {
         // clone.querySelector('span.project').textContent = project
         let dt = parseInt(Date.now()  / day_msecs + day_msecs)
         let dt_diff = parseInt(_task.date_due / day_msecs + day_msecs)  - dt  
-        li_content.querySelector('span.date_due').textContent = dt_diff > 0 ? 'Due in ' + dt_diff + ' days' : 'Overdue ' + dt_diff * -1 + ' days' // new Date(_task.date_due).toLocaleDateString()
+        let text;
+        let bkcolor = '';
+
+        if (dt_diff < -1) {
+            text = `Overdue ${dt_diff * -1} days`;
+            bkcolor = 'rgb(252, 125, 144)';
+        } else if (dt_diff == -1) {
+            text = `Overdue ${dt_diff * -1} day`;
+            bkcolor = 'rgb(252, 125, 144)';
+        } else if (dt_diff == 0) {
+            text = `Due today`;
+        } else if (dt_diff > 1) {
+            text = `${dt_diff} days`;
+        } else if (dt_diff == 1){
+            text = `tomorrow`;
+        }
+    
+        li_content.querySelector('span.date_due').textContent = text   // dt_diff > 0 ? 'Due in ' + dt_diff + ' days' : 'Overdue ' + dt_diff * -1 + ' days' // new Date(_task.date_due).toLocaleDateString()
+        if (bkcolor !== '') { li_content.style.color = bkcolor }
         li_content.querySelector('span.description').textContent = _task.description 
         
 
@@ -605,7 +667,13 @@ class taskInterface {
 
 
 function page_config() {
-    
+    // logical problems
+    /**
+     * tasks marked complete no check for dates in future
+     * no filtering for tasks that are marked complete
+     * no new task functionality formally devved
+     * 
+     */
 
 }
 
