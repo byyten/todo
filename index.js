@@ -9,13 +9,6 @@ let yesterday = today - day_msecs
 let tomorrow = today + day_msecs
 let thisweek = today + 7 * day_msecs
 
-// priorities = {
-//     'none': 0,
-//     'low': 1,
-//     'moderate': 2,
-//     'elevated': 3,
-//     'urgent' :4
-// }
 
 let priorities = {
     urgent: { icon: 'priority_high', text: 'urgent' },
@@ -67,22 +60,21 @@ by_priority = (_t) => _t.priority === _priority
 by_project = (_t) => _t.project === _project
 by_all = (_t) => _t
 
-
-local_storage = () => {
-    _storage = {}
-    setItem = (key, val) =>  _storage[key] = val // JSON.stringify(val)
-    getItem = (key) => _storage[key] //  JSON.parse(_storage[key] )
-    clear = () => _storage = {}
-    removeItem = (key) => delete _storage[key] 
-    return { setItem, getItem, removeItem, clear }   
+local_save = () => {
+    localStorage.setItem('_tasks', jstr(_tasks))
+    localStorage.setItem('_completed', jstr(_completed))
 }
 
-/* local_storage usage  
-    (emulates browser localStorage on Node)
-    localStorage = local_storage()
-    localStorage.setItem('tasks', jstr(tasks))
-    _ret = jpar(localStorage.getItem('tasks'))
-*/
+// faking localStorage in node
+// local_storage = () => {
+//     _storage = {}
+//     setItem = (key, val) =>  _storage[key] = val // JSON.stringify(val)
+//     getItem = (key) => _storage[key] //  JSON.parse(_storage[key] )
+//     clear = () => _storage = {}
+//     removeItem = (key) => delete _storage[key] 
+//     return { setItem, getItem, removeItem, clear }   
+// }
+
 
 // class
 class Task  {
@@ -131,15 +123,6 @@ class Task  {
    _checlist_del = (idx) => this.checklist.splice(idx, 1)
 }
 
-/* Task usage - gen several tasks
-
-    t1 = new Task('1st new task')
-    t1._note('1st commentary')
-    t1._date_due(t1._date_create() + 7 * 24*3600000)
-    t1._project('work')
-    _json = t1._dump()
-*/
-
 class Tasks  {
     constructor() {
         this._list = []
@@ -175,15 +158,6 @@ class Tasks  {
     // _read_store = (store) => jpar(store.getItem('_list'))
 }
 
-/* build tasks and add tasks
-    tasks = new Tasks()
-    tasks._add(t1)
-    _json = tasks._dump()
-
-
-*/
-
-
 class taskInterface {
     constructor() {
         this.projects = projects
@@ -193,10 +167,6 @@ class taskInterface {
         this.values = { }
 
         this.nodes.task_detail_container = selector('div.task_detail')
-        // this.nodes.task_detail_save = selector('div.task_detail span.save')
-        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
-        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
-        // this.nodes[_k].addEventListener('change', (evt) => this.task_change(evt))
         let inputs = Array.from(this.nodes.task_detail_container.querySelectorAll('input, select')).slice(0,7)
         inputs.forEach(_in => _in.addEventListener('change', (evt) => this.task_change(evt)))
 
@@ -664,32 +634,17 @@ class taskInterface {
     clear_tasklist () {
         this.nodes.task_list.querySelectorAll('li').forEach(li => this.nodes.task_list.removeChild(li))
     }
-
 }
 
 
-function page_config() {
-    // logical problems
-    /**
-     * tasks marked complete no check for dates in future
-     * no filtering for tasks that are marked complete
-     * no new task functionality formally devved
-     * 
-     */
-
-}
-
-    // execute 
-    page_config()
-
-
-
-
-function fake_tasks(tasks) {
+// returns JSON object _tasks
+// use to generate debug data
+// _tasks = fake_tasks()
+let fake_tasks = (tasks, ntasks ) => {
     lorem = "Lorem ipsum dolor sit amet consectetur adipisicing elit. Distinctio quidem, corrupti placeat dolor obcaecati quasi laudantium saepe sit, quos perferendis est similique necessitatibus numquam quisquam autem mollitia reiciendis! Rem, illum! Lorem ipsum dolor, sit amet consectetur adipisicing elit. Vel quibusdam, consequatur animi minus eius debitis obcaecati earum sapiente impedit, magnam labore molestias tempore non? Culpa voluptatibus voluptas provident adipisci nulla. Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam, minus harum molestiae velit sapiente odit consequuntur odio dolorum? Inventore consectetur accusamus error eveniet fugiat cupiditate, repudiandae culpa maxime pariatur aperiam."
     projkeys = keys(projects)
     
-    for (n = 0; n < 36; n++) {
+    for (n = 0; n < ntasks; n++) {
         _t = new Task(n + ' auto gen new task')
         _t._note(`${n} ${lorem.substring(parseInt(n * Math.random() * 15), 14)}`)
         _t._date_due(parseInt(Date.now() + ((Math.random() * 24) * day_msecs - (12 * day_msecs))))
@@ -704,15 +659,9 @@ function fake_tasks(tasks) {
     return tasks
 }
 
-// fake_tasks()
-
-function local_save() {
-    localStorage.setItem('_tasks', jstr(_tasks))
-    localStorage.setItem('_completed', jstr(_completed))
-}
-
-
-
+// typical usage, recover tasks from localstorage
+//      using fake_tasks will probably overwrite localstorage copies 
+//      so disable local_save after each tasks._dump()
 let itask = new taskInterface()
 let tasks = new Tasks()
 _tasks = []
@@ -727,478 +676,3 @@ try {
 } catch (e) {
     _tasks = []
 }
-
-
-
-
-/*    
-// localStorage.setItem('_tasks', jstr(tasks._dump()))
-    _tasks = jpar(localStorage.getItem('_tasks'))
-    _tasks.forEach(_task => {
-        let T = new Task(_task.description)
-        T._set(_task)
-        tasks._add(T)
-    })
-*/
-    
-    
-
-
-// itask.set_fields(tasks._list[3])
-
-// let tasks = new Tasks()
-// tasks = fake_tasks(tasks)
-// _tasks = tasks._dump()
-
-
-// itask.list(by_all, priorities, 'By Priority', false, true)
-
-
-
-
-
-
-
-
-
-
-
-
-// itask._blank = jpar(jstr(_tasks[0]));
-// keys(itask._blank).forEach(_k => {console.log(_k); itask._blank[_k] = ( itask._blank[_k] instanceof Array ? [] : '')})
-
-
-
-
-// tasks_by_timeframe = {
-//   	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
-//     today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
-//     tomorrow: _tasks.filter(_t =>  _t.date_due > today && _t.date_due < tomorrow ),
-//     restofweek: _tasks.filter(_t =>  _t.date_due > tomorrow && _t.date_due < thisweek ),
-//   	future:  _tasks.filter(_t =>  _t.date_due > thisweek )
-// }
-// tasks_by_timeframe_count = checksum(tasks_by_timeframe)
-// console.log(['tasks_by_timeframe_count',tasks_by_timeframe_count ])
-
-// tasks_by_project = (projects) => {
-//     by_project = {}
-//     projects.forEach()
-
-//     return {
-//         unassigned: _tasks.filter(_t => _t.project == '_' ),
-//         home: _tasks.filter(_t => _t.project == 'home' ),
-//         work: _tasks.filter(_t => _t.project == 'work' ),
-//         family: _tasks.filter(_t => _t.project == 'family' ),
-//         health: _tasks.filter(_t => _t.project == 'health' ),
-//         growth: _tasks.filter(_t => _t.project == 'growth' ),
-//         leisure: _tasks.filter(_t => _t.project == 'leisure' ),
-    
-//     }
-
-// }
-// tasks_by_project_count = checksum(tasks_by_project)
-// console.log(['tasks_by_group_count', tasks_by_project_count])
-
-// tasks_by_priority = {
-//     urgent: _tasks.filter(_t => _t.priority == 'urgent' ),
-//     elevated: _tasks.filter(_t => _t.priority == 'elevated' ),
-//     moderate: _tasks.filter(_t => _t.priority == 'moderate' ),
-//     low: _tasks.filter(_t => _t.priority == 'low' ),
-//     none: _tasks.filter(_t => _t.priority == 'none' ),
-    
-// }
-// tasks_by_priority_count = checksum(tasks_by_priority)
-// console.log(['tasks_by_priority_count', tasks_by_priority_count])
-
-// tomorrow_grps_srtd_pri = group_then_sort_each(tasks_by_timeframe.tomorrow, projects, by_priority)
-// all_priority_srt_grp = group_then_sort_each(_tasks, keys(priorities), by_project)
-
-// itask.clear_tasklist()
-// keys(tomorrow_grps_srtd_pri).forEach(grp => {
-//   if (tomorrow_grps_srtd_pri[grp].length) {
-//     let clone = itask.list_seperator(projects[grp].icon, grp)
-//     // clone = itask.nodes.task_list_seperator_clone.cloneNode(true)
-//     // clone.querySelector('span.seperator').textContent = projects[grp].icon
-//     // clone.querySelector('span.label').textContent = grp
-//     itask.nodes.task_list.appendChild(clone)
-//         tomorrow_grps_srtd_pri[grp].forEach(task => {
-//                 item = itask.tasklist_task(task, true, false)
-//                 itask.nodes.task_list.appendChild(item)
-//               })        
-//   }
-// })
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-
-group_then_sort_each = (list, fields, sort_by) => {
-    groups_sorted = {}
-    fields.forEach(fld => {
-        groups_sorted[fld] = list.filter(tsk => tsk[fld] == fld).sort(sort_by)
-    })
-  return groups_sorted
-}
-
-checksum = (tasks_by) => {
-    let tot = 0
-    tasks_by_res = keys(tasks_by).reduce(( tot, f)=>tot += tasks_by[f].length, tot)
-    return tasks_by_res
-}
-
-_tasks = tasks._dump()
-tasks_by_timeframe = {
-  	overdue: _tasks.filter(_t =>  _t.date_due < yesterday ), 
-    today: _tasks.filter(_t =>  _t.date_due > yesterday &&  _t.date_due < today ),
-    tomorrow: _tasks.filter(_t =>  _t.date_due > today && _t.date_due > tomorrow ),
-    thisweek: _tasks.filter(_t =>  _t.date_due < thisweek ),
-  	distant:  _tasks.filter(_t =>  _t.date_due > thisweek )
-}
-
-
-by_priority = (a, b) => priorities[a.priority] > priorities[b.priority]
-
-group_sort = (list, group_by, sort_by) => {
-	groups_sorted = {}
-    group_by.forEach(grp => {
-    groups_sorted[grp] = []
-    groups_sorted[grp].push(list.filter(tsk => tsk.project == grp).sort(sort_by))
-  })
-  return groups_sorted
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // tasklisting
-        // this.nodes.task_list
-        
-        // this.nodes.projects_add = selector('div.addProject')
-        // this.nodes.projects_add.addEventListener('click', (evt) => {
-        //     res = prompt('')
-        // })
-
-        //this.nodes.assign = selector('.assign')
-
-        /*
-            nodes.description    onchange this.values.description = evt.target.value -- description, note, date_create
-            nodes.note           onchange this.values.note = evt.target.value
-            nodes.project        onchange --> this.values.project = this.nodes.project.value
-            nodes.priority       onchange --> this.values.priority = priorities[this.nodes.priority.value]
-            nodes.date_due       onchange --> this.values.date_due = this.nodes.date_due.valueAsNumber
-            nodes.date_done      onchange --> { 
-                this.values.date_done = this.nodes.date_done.valueAsNumber
-                nodes.date_done_label.classlist.replace('viz', 'xviz')        
-            }
-
-            nodes.date_done_label    onclick  --> this.values.date_done = Date.now() 
-            nodes.date_done_label    ondblclick  --> {
-                nodes.date_done_label.classList.replace('viz', 'xviz')        
-                this.nodes.date_done.classList.replace('xviz','viz')
-            }                
-
-        nodes.checklist_add  onclick --> {
-            checklist_ul.appendChild(checklist_li_clone.cloneNode(true)   
-        }
-        
-        
-        
-        
-        
-
-tasks_by_timeframe.overdue.sort(by_priority )
-
-// display tasks
-itask._
-
-
-
-
-
-
-
-let priorities = {
-    '-': 0,
-    'low': 1,
-    'moderate': 2,
-    'elevated': 3,
-    'urgent' :4
-}
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-/*
-
-// atask = {
-//     "priorities": [
-//       "high",
-//       "medium",
-//       "low",
-//       "none"
-//     ],
-//     "id": "T_1689628114359",
-//     "description": "1st new task",
-//     "project": "work",
-//     "priority": "none",
-//     "date_create": 1689628114359,
-//     "date_due": 1690232914359,
-//     "date_done": -1,
-//     "note": "1st commentary",
-//     "checklist": [
-//       {
-//         "id": "262c834d-8aff-4f64-9ec9-b8a583690de4",
-//         "status": false,
-//         "subtask": "1st subtask"
-//       },
-//       {
-//         "id": "f163a2f5-6d4a-4fba-a8f6-f098c0d5e445",
-//         "status": true,
-//         "subtask": "2nd subtask"
-//       },
-//       {
-//         "id": "ba9a8529-da4c-475b-bcda-9d4fd044e1d1",
-//         "status": false,
-//         "subtask": "3rd subtask"
-//       }
-//     ],
-//     "assign": -1
-//   }
-
-
-//    tasks = new Tasks()
-//     tasks._add(t1)
-//     tasks._add(t2)
-
-
-// task = tasks._get(_t1.id)
-// _task = task._dump()
-
-
-// sample data to populate 
-    t1 = new Task('1st new task')
-    t1._note('1st commentary')
-    t1._date_due(t1._date_create() + 7 * 24*3600000)
-    t1._project('work')
-
-    t1.checklist = [
-    { id: uuid(), status: false, subtask: '1st subtask'},
-    { id: uuid(), status: true, subtask: '2nd subtask'},
-    { id: uuid(), status: false, subtask: '3rd subtask'}
-    ]
-    _t1 = t1._dump()
-
-
-    // populate the task detail
-
-
-    // selector('.task_detail').setAttribute('data-id', t1.id)
-    // selector('.task_detail').getAttribute('data-id')
-
-    task_id = selector('.task_detail')
-    task_id.setAttribute('data-id', t1.id)
-    task_id_val = task_id.getAttribute('data-id')
-
-    textContent(selector('.description .label'), t1.description )
-    textContent(selector('.note .label'), t1.note)
-    textContent(selector('.priority .label'), t1.priority)
-    textContent(selector('.project .label'), t1.project)
-    t1.checklist.forEach(t => {
-        li = checklist_li_clone.cloneNode(true)
-        li.querySelector('.label').textContent = t.subtask
-        console.log(li.innerHTML)
-        checklist_ul.appendChild(li)  
-    })
-    
-    // textContent(selector('.date_due .label'), t1.date_due)  // convert date to something usefull/intelligeable
-    // selector('.date_due .label')
-
-    date_due = selector('input.date_due')
-    date_due.valueAsNumber = t1.date_due
-
-    date_done = selector('.date_done')    // .value = '2023-06-31'
-    date_done.addEventListener('click', (evt) => {
-        t = tasks._get(task_id_val)
-    t._date_done(Date.now())
-    
-    })
-
-
-
-    // get a cloned li node & remove 1st/only unlabeled 
-    checklist_li_clone = selector('.checklist_li').cloneNode(true)
-    checklist_ul = selector('.checklist_ul')
-    checklist_ul.removeChild(selector('.checklist_li'))
-
-
-
-    function populate_task_detail (task) {
-        currect_task = task._dump()
-        task_id = selector('.task_detail')
-        task_id.setAttribute('data-id', task.id)
-        // task_id_val = task_id.getAttribute('data-id')
-    
-        // set basic text fields
-        desc = selector('.description .label')
-        // desc.addEventListener('blur',(evt) => {
-        //     field = evt.target.classList[0]
-        //     if (evt.target.textContent !== current_task[field] )
-        // })
-
-
-//         desc = selector('.description .label')
-//         // .label')
-// desc.textContent
-
-
-// desc.addEventListener('blur', (evt) => {   
-// field = 'description'
-// if (evt.target.textContent !== current_task[field] ) {
-// console.log('changed')
-// } else {
-// console.log('same')
-// }
-
-// })
-
-
-
-        textContent(desc, task.description )
-
-        textContent(selector('.note .label'), task.note)
-        textContent(selector('.priority .label'), task.priority)
-        textContent(selector('.project .label'), task.project)
-
-
-        // build the tasks
-        task.checklist.forEach(t => {
-            li = checklist_li_clone.cloneNode(true)
-            li.querySelector('.label').textContent = t.subtask
-            // console.log(li.innerHTML)
-            li.setAttribute('data-id', t.id)
-            li.querySelector('.checklist_done').addEventListener('click', (evt) => {
-                idx = task.checklist.findIndex(st => st.id === t.id)
-                // set the corresponding checklist item status (done/not done)
-                task.checklist[idx].status = !task.checklist[idx].status
-                // toggle icon or colours or both
-                evt.target.textContent = task.checklist[idx].status ? 'check_box' : 'disabled_by_default'    
-            })
-            li.querySelector('.checklist_del').addEventListener('click', (evt) => {
-                idx = task.checklist.findIndex(st => st.id === t.id)
-                console.log([t.id, idx])
-                // get idx and trash it
-                task.checklist.splice(idx, 1) 
-                checklist_ul.removeChild(selector('[data-id="' + t.id + '"'))
-            })
-
-            checklist_ul.appendChild(li) 
-        })
-        
-        // textContent(selector('.date_due .label'), t1.date_due)  // convert date to something usefull/intelligeable
-        // selector('.date_due .label')
-
-        // 1st pass use input/date control
-        date_due = selector('input.date_due')
-        date_due.valueAsNumber = task.date_due
-    
-        // set event to mark task as done
-        // should have validation to check all checklist subtasks are complete
-        date_done = selector('.date_done')    // .value = '2023-06-31'
-        date_done.addEventListener('click', (evt) => {
-            t = tasks._get(task.id)
-            t._date_done(Date.now())
-        })
-    
-    
-    
-    
-    
-
-    }    
-
-
-    // t1 = new Task('1st new task')
-    // t1._note('1st commentary')
-    // t1._date_due(t1._date_create() + 7 * 24*3600000)
-    // t1._project('work')
-    // t1._priority('moderate')
-
-    // t1.checklist = [
-    // { id: uuid(), status: false, subtask: '1st subtask'},
-    // { id: uuid(), status: true, subtask: '2nd subtask'},
-    // { id: uuid(), status: false, subtask: '3rd subtask'}
-    // ]
-    // _t1 = t1._dump()
-
-    // t2 = new Task('2nd new task')
-    // t2._note('2nd commentary')
-    // t2._date_due(t2._date_create() + 3 * 24*3600000)
-    // t2._project('home')
-
-    // t2.checklist = [
-    //     { id: uuid(), status: false, subtask: '1st subtask'},
-    // ]
-    // _t2 = t2._dump()
-
-    // t3 = new Task('2nd new task')
-    // t3._note('2nd commentary')
-    // t3._date_due(t2._date_create() + 3 * 24*3600000)
-    // t2._project('home')
-
-    // t2.checklist = [
-    //     { id: uuid(), status: false, subtask: '1st subtask'},
-    // ]
-    // _t2 = t2._dump()
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
